@@ -17,7 +17,7 @@ type Position = {
 };
 
 const useChessContext = () => {
-  const [stage, setStage] = useState<number>(0); // 0 = start, 1 = play, 2 = done,
+  const [stage, setStage] = useState<number>(1); // 1 = start, 2 = play, 3 = done,
   const [size, setSize] = useState<number>(10);
   const [maxSteps, setMaxSteps] = useState<number>(4);
   const [steps, setSteps] = useState<Position[]>([]);
@@ -208,7 +208,45 @@ const Block = memo((props: { position: Position }): JSX.Element => {
   );
 });
 
-const Stage1 = () => {
+const Blocks = (): JSX.Element => {
+  const chess = useChess();
+  const { nxn, size, sizeChess } = chess;
+
+  const style: React.CSSProperties = {
+    border: '1px solid lightgrey',
+    display: 'grid',
+    gridTemplateColumns: `repeat(${size}, 1fr)`,
+    gridTemplateRows: `repeat(${size}, 1fr)`,
+    gap: 0,
+    width: `${sizeChess}px`,
+    height: `${sizeChess}px`,
+    margin: '0 auto',
+  };
+
+  return (
+    <div style={style}>
+      {nxn.map((position_i, i) => (
+        <Block key={i} position={position_i} />
+      ))}
+    </div>
+  );
+};
+
+const Steps = (): JSX.Element => {
+  const { steps } = useChess();
+
+  return (
+    <ol>
+      {steps.map((step_i, i) => (
+        <li key={i}>
+          ({step_i.x}, {step_i.y})
+        </li>
+      ))}
+    </ol>
+  );
+};
+
+const Stage1 = (): JSX.Element => {
   const chess = useChess();
   const { size, setSize, maxSteps, setMaxSteps, setStage } = chess;
 
@@ -259,29 +297,18 @@ const Stage1 = () => {
   );
 };
 
-const Stage2 = () => {
+const Stage2 = (): JSX.Element => {
   const chess = useChess();
-  const { size, sizeChess, nxn, setStage, remaingingStep, isDone } = chess;
+  const { setStage, remaingingStep, isDone } = chess;
 
-  const styleChess: React.CSSProperties = {
-    border: '1px solid lightgrey',
-    display: 'grid',
-    gridTemplateColumns: `repeat(${size}, 1fr)`,
-    gridTemplateRows: `repeat(${size}, 1fr)`,
-    gap: 0,
-    width: `${sizeChess}px`,
-    height: `${sizeChess}px`,
-    margin: '0 auto',
-  };
-
-  const styleTop: React.CSSProperties = {
+  const style: React.CSSProperties = {
     display: 'grid',
     gridTemplateColumns: `repeat(3, 1fr)`,
   };
 
   return (
     <div style={{ width: '100%' }}>
-      <div style={styleTop}>
+      <div style={style}>
         <div>
           <button role="button" onClick={(_e) => setStage(0)}>
             Back
@@ -298,17 +325,13 @@ const Stage2 = () => {
         </div>
         <div>remaining number of step {remaingingStep}</div>
       </div>
-      <div style={styleChess}>
-        {nxn.map((position_i, i) => (
-          <Block key={i} position={position_i} />
-        ))}
-      </div>
+      <Blocks />
     </div>
   );
 };
 
-const Stage3 = () => {
-  const { steps, setStage } = useChess();
+const Stage3 = (): JSX.Element => {
+  const { setStage } = useChess();
 
   const styleBody: React.CSSProperties = {
     width: '100%',
@@ -323,13 +346,7 @@ const Stage3 = () => {
   return (
     <div style={styleBody}>
       <div>
-        <ol>
-          {steps.map((step_i, i) => (
-            <li key={i}>
-              ({step_i.x}, {step_i.y})
-            </li>
-          ))}
-        </ol>
+        <Steps />
       </div>
       <div style={styleBottom}>
         <div>
@@ -347,22 +364,22 @@ const Stage3 = () => {
   );
 };
 
-const Stages = () => {
+const Stages = (): JSX.Element => {
   const chess = useChess();
   const { stage } = chess;
 
   switch (stage) {
-    case 2:
+    case 3:
       return <Stage3 />;
-    case 1:
+    case 2:
       return <Stage2 />;
-    case 0:
+    case 1:
     default:
       return <Stage1 />;
   }
 };
 
-function App() {
+function App(): JSX.Element {
   return (
     <ChessProvider>
       <Stages />
