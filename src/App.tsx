@@ -19,16 +19,20 @@ type Position = {
 const useChessContext = () => {
   const [stage, setStage] = useState<number>(1); // 1 = start, 2 = play, 3 = done,
   const [size, setSize] = useState<number>(10);
-  const [maxSteps, setMaxSteps] = useState<number>(4);
-  const [steps, setSteps] = useState<Position[]>([]);
+  const [maxSteps, setMaxSteps] = useState<number>(10);
+  const [selectedSteps, setSelectedSteps] = useState<Position[]>([]);
 
-  const lastStep = useMemo<Position | undefined>(() => {
-    return steps.at(-1);
-  }, [steps]);
+  const lastSelectedStep = useMemo<Position | undefined>(() => {
+    const lastIndex = selectedSteps.length - 1;
+    if (lastIndex < 0) {
+      return undefined;
+    }
+    return selectedSteps[lastIndex];
+  }, [selectedSteps]);
 
   const remaingingStep = useMemo<number>(
-    () => maxSteps - steps.length,
-    [steps, maxSteps],
+    () => maxSteps - selectedSteps.length,
+    [selectedSteps, maxSteps],
   );
 
   const isDone = useMemo<boolean>(() => {
@@ -48,24 +52,36 @@ const useChessContext = () => {
     }
     return array;
   }, [size]);
-  const sizeBlock = 30;
-  const sizeChess = useMemo<number>(() => sizeBlock * size, [size]);
+  const sizeBlock = useMemo(() => 60, []);
+  const sizeChess = useMemo<number>(() => sizeBlock * size, [size, sizeBlock]);
+  const nxnGridArea = useMemo<string>(() => {
+    const area: string[] = [];
+    for (let x = 1; x <= size; x++) {
+      const row: string[] = [];
+      for (let y = 1; y <= size; y++) {
+        row.push(`b-${x}-${y}`);
+      }
+      area.push(`'${row.join(' ')}'`);
+    }
+    return area.join(' ');
+  }, [size]);
 
   return {
     size,
     setSize,
     maxSteps,
     setMaxSteps,
-    steps,
-    setSteps,
-    lastStep,
+    selectedSteps,
+    setSelectedSteps,
+    lastSelectedStep,
+    remaingingStep,
     nxn,
+    nxnGridArea,
     isDone,
     stage,
     setStage,
     sizeChess,
     sizeBlock,
-    remaingingStep,
   };
 };
 
@@ -73,25 +89,14 @@ type ChessReturn = ReturnType<typeof useChessContext>;
 
 const useChess = () => useContext(ChessContext);
 
-const setFristPositionRandomly = (props: ChessReturn): void => {
-  const { size, setSteps } = props;
+const setFristStepRandomly = (props: ChessReturn): void => {
+  const { size, setSelectedSteps } = props;
   const step1: Position = {
     x: Math.ceil(Math.random() * size),
     y: Math.ceil(Math.random() * size),
   };
 
-  setSteps([step1]);
-};
-
-const isBlockSelected = (props: {
-  position: Position;
-  steps: Position[];
-}): boolean => {
-  const { position, steps } = props;
-  const { x, y } = position;
-  const isFound =
-    steps.find((step_i) => step_i.x === x && step_i.y === y) != null;
-  return isFound;
+  setSelectedSteps([step1]);
 };
 
 const getBlockSelectedIndex = (props: {
@@ -103,28 +108,46 @@ const getBlockSelectedIndex = (props: {
   return steps.findIndex((step_i) => step_i.x === x && step_i.y === y);
 };
 
-const clickBlock = (props: {
+const selectBlock = (props: {
   chess: ChessReturn;
   position: Position;
 }): void => {
   const {
-    chess: { lastStep, setSteps, maxSteps, steps },
-    position: { x, y },
+    chess: { lastSelectedStep, setSelectedSteps, maxSteps, selectedSteps },
+    position,
   } = props;
 
-  if (maxSteps === steps.length) {
+  if (maxSteps === selectedSteps.length) {
     return;
-  } else if (lastStep == null) {
-    setSteps((prevSteps) => [...prevSteps, { x, y }]);
+  } else if (lastSelectedStep == null) {
+    setSelectedSteps([position]);
     return;
   } else {
-    const { x: lastX, y: lastY } = lastStep;
-    const isAdjacentX = Math.abs(x - lastX) === 1;
-    const isAdjacentY = Math.abs(y - lastY) === 1;
-    if (isAdjacentX || isAdjacentY) {
-      setSteps((prevSteps) => [...prevSteps, { x, y }]);
+    const distanceX = Math.abs(position.x - lastSelectedStep.x);
+    const distanceY = Math.abs(position.y - lastSelectedStep.y);
+    const isAdjacent = Math.max(distanceX, distanceY) <= 1;
+    if (isAdjacent) {
+      setSelectedSteps((prevSelectedSteps) => [...prevSelectedSteps, position]);
     }
   }
+};
+
+const unselectBlock = (props: { chess: ChessReturn; position: Position }) => {
+  const { chess, position } = props;
+  const { selectedSteps, setSelectedSteps, lastSelectedStep } = chess;
+
+  if (
+    lastSelectedStep == null ||
+    lastSelectedStep.x !== position.x ||
+    lastSelectedStep.y !== position.y
+  ) {
+    return;
+  }
+
+  const nextSelectedSteps = [...selectedSteps];
+  nextSelectedSteps.pop();
+
+  setSelectedSteps(nextSelectedSteps);
 };
 
 const toggleBlock = (props: {
@@ -132,17 +155,19 @@ const toggleBlock = (props: {
   position: Position;
 }): void => {
   const { chess, position } = props;
-  const { setSteps, steps } = chess;
+  const { setSelectedSteps, selectedSteps } = chess;
   const { x, y } = position;
 
-  const index = steps.findIndex((step_i) => step_i.x === x && step_i.y === y);
+  const index = selectedSteps.findIndex(
+    (step_i) => step_i.x === x && step_i.y === y,
+  );
   if (index === -1) {
-    clickBlock({ chess, position });
+    selectBlock({ chess, position });
   } else {
-    setSteps((prevSteps) => {
-      const nextSteps = [...prevSteps];
-      nextSteps.splice(index, 1);
-      return nextSteps;
+    setSelectedSteps((prevSelectedSteps) => {
+      const nextSelectedSteps = [...prevSelectedSteps];
+      nextSelectedSteps.splice(index, 1);
+      return nextSelectedSteps;
     });
   }
 };
@@ -152,16 +177,17 @@ const USE_CHESS_DEFAULT: ChessReturn = {
   setSize: EMPTY_FUNCTION,
   maxSteps: 0,
   setMaxSteps: EMPTY_FUNCTION,
-  steps: [],
-  setSteps: EMPTY_FUNCTION,
+  selectedSteps: [],
+  setSelectedSteps: EMPTY_FUNCTION,
   nxn: [],
   isDone: false,
   stage: 0,
   setStage: EMPTY_FUNCTION,
-  lastStep: undefined,
+  lastSelectedStep: undefined,
   sizeChess: 0,
   sizeBlock: 0,
   remaingingStep: 0,
+  nxnGridArea: '',
 };
 
 const ChessContext = createContext<ChessReturn>(USE_CHESS_DEFAULT);
@@ -176,68 +202,101 @@ const ChessProvider = (props: { children: JSX.Element }): JSX.Element => {
   );
 };
 
-const Block = memo((props: { position: Position }): JSX.Element => {
-  const { position } = props;
-  const { x, y } = position;
-  const chess = useChess();
-  const { sizeBlock, steps } = chess;
-  const size = `${sizeBlock}px`;
-  const isOdd = useMemo(() => (x + y) % 2 === 1, [x, y]);
-  const isSelected = useMemo(() => {
-    return isBlockSelected({ position, steps });
-  }, [position, steps]);
-  const index = useMemo(() => {
-    const index = getBlockSelectedIndex({ position, steps });
-    return index === -1 ? null : index + 1;
-  }, [position, steps]);
-  const style: React.CSSProperties = useMemo(
-    () => ({
-      backgroundColor: `${
-        isSelected ? 'yellow' : isOdd ? 'white' : 'lightgrey'
-      }`,
-      width: size,
-      height: size,
-    }),
-    [size, isOdd, isSelected],
-  );
+const BlockSelected = memo(
+  (props: { sizeBlock: number; position: Position }): JSX.Element => {
+    const { position, sizeBlock } = props;
+    const chess = useChess();
+    const { selectedSteps } = chess;
+    const size = `${sizeBlock}px`;
 
-  return (
-    <div style={style} onClick={(_e) => toggleBlock({ chess, position })}>
-      <>{index}</>
-    </div>
-  );
-});
+    const index = useMemo(() => {
+      const index = getBlockSelectedIndex({ position, steps: selectedSteps });
+      return index === -1 ? null : index + 1;
+    }, [position, selectedSteps]);
+
+    const style: React.CSSProperties = useMemo(
+      () => ({
+        backgroundColor: 'yellow',
+        width: size,
+        height: size,
+        display: 'grid',
+        placeContent: 'center center',
+        gridArea: `b-${position.x}-${position.y}`,
+        zIndex: 1,
+      }),
+      [size, position],
+    );
+
+    return (
+      <div style={style} onClick={() => unselectBlock({ chess, position })}>
+        <>{index}</>
+      </div>
+    );
+  },
+);
+
+const Block = memo(
+  (props: { sizeBlock: number; position: Position }): JSX.Element => {
+    const { position, sizeBlock } = props;
+    const chess = useChess();
+
+    const style: React.CSSProperties = useMemo(
+      () => ({
+        backgroundColor: `${
+          (position.x + position.y) % 2 === 1 ? 'white' : 'lightgrey'
+        }`,
+        width: `${sizeBlock}px`,
+        height: `${sizeBlock}px`,
+        display: 'grid',
+        placeContent: 'center center',
+        gridArea: `b-${position.x}-${position.y}`,
+      }),
+      [sizeBlock, position],
+    );
+
+    return (
+      <div style={style} onClick={() => toggleBlock({ chess, position })}></div>
+    );
+  },
+);
 
 const Blocks = (): JSX.Element => {
   const chess = useChess();
-  const { nxn, size, sizeChess } = chess;
+  const { nxn, size, sizeChess, sizeBlock, nxnGridArea, selectedSteps } = chess;
 
-  const style: React.CSSProperties = {
-    border: '1px solid lightgrey',
-    display: 'grid',
-    gridTemplateColumns: `repeat(${size}, 1fr)`,
-    gridTemplateRows: `repeat(${size}, 1fr)`,
-    gap: 0,
-    width: `${sizeChess}px`,
-    height: `${sizeChess}px`,
-    margin: '0 auto',
-  };
+  const style: React.CSSProperties = useMemo(
+    () => ({
+      border: '1px solid lightgrey',
+      display: 'grid',
+      gridTemplateColumns: `repeat(${size}, 1fr)`,
+      gridTemplateRows: `repeat(${size}, 1fr)`,
+      gridTemplateAreas: nxnGridArea,
+      gap: 0,
+      width: `${sizeChess}px`,
+      height: `${sizeChess}px`,
+      margin: '0 auto',
+    }),
+    [size, sizeChess, nxnGridArea],
+  );
 
   return (
     <div style={style}>
       {nxn.map((position_i, i) => (
-        <Block key={i} position={position_i} />
+        <Block key={i} position={position_i} sizeBlock={sizeBlock} />
+      ))}
+      {selectedSteps.map((step_i, i) => (
+        <BlockSelected key={i} position={step_i} sizeBlock={sizeBlock} />
       ))}
     </div>
   );
 };
 
-const Steps = (): JSX.Element => {
-  const { steps } = useChess();
+const SelectedSteps = (): JSX.Element => {
+  const { selectedSteps } = useChess();
 
   return (
     <ol>
-      {steps.map((step_i, i) => (
+      {selectedSteps.map((step_i, i) => (
         <li key={i}>
           ({step_i.x}, {step_i.y})
         </li>
@@ -246,80 +305,124 @@ const Steps = (): JSX.Element => {
   );
 };
 
-const Stage1 = (): JSX.Element => {
-  const chess = useChess();
-  const { size, setSize, maxSteps, setMaxSteps, setStage } = chess;
+const step1ChangeSize = (
+  e: React.ChangeEvent<HTMLInputElement>,
+  chess: ChessReturn,
+): void => {
+  const { setSize } = chess;
+  let nextValue: number;
+  try {
+    nextValue = parseInt(e.target.value, 10);
+  } catch {
+    nextValue = 0;
+  }
+  setSize(nextValue);
+};
 
-  const style: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gridTemplateRows: 'repeat(3, 1fr)',
-  };
+const Step1ChangeMaxSteps = (
+  e: React.ChangeEvent<HTMLInputElement>,
+  chess: ChessReturn,
+): void => {
+  const { setMaxSteps } = chess;
+  let nextValue: number;
+  try {
+    nextValue = parseInt(e.target.value, 10);
+  } catch {
+    nextValue = 0;
+  }
+  setMaxSteps(nextValue);
+};
+
+const STEP1_STYLE: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, 1fr)',
+  gridTemplateRows: 'repeat(3, 1fr)',
+  gridTemplateAreas: [
+    "'size_label size_input'",
+    "'max_steps_label max_steps_input'",
+    "'next next'",
+  ].join(' '),
+  gap: '10px',
+};
+
+const STEP1_SIZE_LABEL_STYLE: React.CSSProperties = {
+  gridArea: 'size_label',
+  placeSelf: 'center start',
+};
+
+const STEP1_SIZE_INPUT_STYLE: React.CSSProperties = {
+  gridArea: 'size_input',
+};
+
+const STEP1_MAX_STEPS_LABEL_STYLE: React.CSSProperties = {
+  gridArea: 'max_steps_label',
+  placeSelf: 'center start',
+};
+
+const STEP1_MAX_STEPS_INPUT_STYLE: React.CSSProperties = {
+  gridArea: 'max_steps_input',
+};
+
+const STEP1_NEXT_BUTTON_STYLE: React.CSSProperties = {
+ gridArea: 'next',
+};
+
+const Step1 = (): JSX.Element => {
+  const chess = useChess();
+  const { size, maxSteps, setStage } = chess;
 
   return (
-    <div style={style}>
-      <div>Chess Board Size (nxn)</div>
-      <div>
-        <input
-          placeholder="size (nxn)"
-          type="number"
-          value={size}
-          onChange={(e) => {
-            setSize(parseInt(e.target.value, 10));
-          }}
-        ></input>
-      </div>
-      <div>Number of available steps</div>
-      <div>
-        <input
-          placeholder="max steps"
-          type="number"
-          value={maxSteps}
-          onChange={(e) => {
-            setMaxSteps(parseInt(e.target.value, 10));
-          }}
-        ></input>
-      </div>
-      <div></div>
-      <div>
-        <button
-          role="button"
-          disabled={size <= 0 || maxSteps <= 0}
-          onClick={(_e) => {
-            setFristPositionRandomly(chess);
-            setStage(2);
-          }}
-        >
-          Next
-        </button>
-      </div>
+    <div style={STEP1_STYLE}>
+      <div style={STEP1_SIZE_LABEL_STYLE}>Chess Board Size (nxn)</div>
+      <input
+        style={STEP1_SIZE_INPUT_STYLE}
+        placeholder="size (nxn)"
+        type="number"
+        value={size ?? 0}
+        onChange={(e) => step1ChangeSize(e, chess)}
+      ></input>
+      <div style={STEP1_MAX_STEPS_LABEL_STYLE}>Number of available steps</div>
+      <input
+        style={STEP1_MAX_STEPS_INPUT_STYLE}
+        placeholder="max steps"
+        type="number"
+        value={maxSteps}
+        onChange={(e) => Step1ChangeMaxSteps(e, chess)}
+      ></input>
+      <button
+        style={STEP1_NEXT_BUTTON_STYLE}
+        role="button"
+        disabled={size <= 0 || maxSteps <= 0}
+        onClick={() => {
+          setFristStepRandomly(chess);
+          setStage(2);
+        }}
+      >
+        Next
+      </button>
     </div>
   );
 };
 
-const Stage2 = (): JSX.Element => {
+const STEP2_STYLE: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: `repeat(3, 1fr)`,
+};
+
+const Step2 = (): JSX.Element => {
   const chess = useChess();
   const { setStage, remaingingStep, isDone, maxSteps } = chess;
 
-  const style: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: `repeat(3, 1fr)`,
-  };
-
   return (
     <div style={{ width: '100%' }}>
-      <div style={style}>
+      <div style={STEP2_STYLE}>
         <div>
-          <button role="button" onClick={(_e) => setStage(1)}>
+          <button role="button" onClick={() => setStage(1)}>
             Back
           </button>
         </div>
         <div>
-          <button
-            role="button"
-            disabled={!isDone}
-            onClick={(_e) => setStage(3)}
-          >
+          <button role="button" disabled={!isDone} onClick={() => setStage(3)}>
             Next
           </button>
         </div>
@@ -332,29 +435,29 @@ const Stage2 = (): JSX.Element => {
   );
 };
 
-const Stage3 = (): JSX.Element => {
-  const { setStage } = useChess();
+const STEP3_STYLE: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, 1fr)',
+  width: '100%',
+};
 
-  const style: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    width: '100%',
-  };
+const Step3 = (): JSX.Element => {
+  const { setStage } = useChess();
 
   return (
     <div>
       <div>
         <h2>Thank you! Your Steps</h2>
-        <Steps />
+        <SelectedSteps />
       </div>
-      <div style={style}>
+      <div style={STEP3_STYLE}>
         <div>
-          <button role="button" onClick={(_e) => setStage(2)}>
+          <button role="button" onClick={() => setStage(2)}>
             Back
           </button>
         </div>
         <div>
-          <button role="button" onClick={(_e) => setStage(1)}>
+          <button role="button" onClick={() => setStage(1)}>
             START OVER
           </button>
         </div>
@@ -363,25 +466,25 @@ const Stage3 = (): JSX.Element => {
   );
 };
 
-const Stages = (): JSX.Element => {
+const Steps = (): JSX.Element => {
   const chess = useChess();
   const { stage } = chess;
 
   switch (stage) {
     case 3:
-      return <Stage3 />;
+      return <Step3 />;
     case 2:
-      return <Stage2 />;
+      return <Step2 />;
     case 1:
     default:
-      return <Stage1 />;
+      return <Step1 />;
   }
 };
 
 function App(): JSX.Element {
   return (
     <ChessProvider>
-      <Stages />
+      <Steps />
     </ChessProvider>
   );
 }
