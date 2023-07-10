@@ -258,7 +258,7 @@ const Stage1 = (): JSX.Element => {
 
   return (
     <div style={style}>
-      <div>Size of the chess board (nxn)</div>
+      <div>Chess Board Size (nxn)</div>
       <div>
         <input
           placeholder="size (nxn)"
@@ -269,7 +269,7 @@ const Stage1 = (): JSX.Element => {
           }}
         ></input>
       </div>
-      <div>Available number of steps</div>
+      <div>Number of available steps</div>
       <div>
         <input
           placeholder="max steps"
@@ -299,7 +299,7 @@ const Stage1 = (): JSX.Element => {
 
 const Stage2 = (): JSX.Element => {
   const chess = useChess();
-  const { setStage, remaingingStep, isDone } = chess;
+  const { setStage, remaingingStep, isDone, maxSteps } = chess;
 
   const style: React.CSSProperties = {
     display: 'grid',
@@ -323,7 +323,9 @@ const Stage2 = (): JSX.Element => {
             Next
           </button>
         </div>
-        <div>remaining number of step {remaingingStep}</div>
+        <div>
+          Steps left: {remaingingStep}/{maxSteps}
+        </div>
       </div>
       <Blocks />
     </div>
@@ -346,6 +348,7 @@ const Stage3 = (): JSX.Element => {
   return (
     <div style={styleBody}>
       <div>
+        <h2>Thank you! Your Steps</h2>
         <Steps />
       </div>
       <div style={styleBottom}>
@@ -356,7 +359,7 @@ const Stage3 = (): JSX.Element => {
         </div>
         <div>
           <button role="button" onClick={(_e) => setStage(1)}>
-            Done
+            START OVER
           </button>
         </div>
       </div>
