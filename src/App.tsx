@@ -287,7 +287,7 @@ const Stage1 = (): JSX.Element => {
           disabled={size <= 0 || maxSteps <= 0}
           onClick={(_e) => {
             setFristPositionRandomly(chess);
-            setStage(1);
+            setStage(2);
           }}
         >
           Next
@@ -310,7 +310,7 @@ const Stage2 = (): JSX.Element => {
     <div style={{ width: '100%' }}>
       <div style={style}>
         <div>
-          <button role="button" onClick={(_e) => setStage(0)}>
+          <button role="button" onClick={(_e) => setStage(1)}>
             Back
           </button>
         </div>
@@ -318,7 +318,7 @@ const Stage2 = (): JSX.Element => {
           <button
             role="button"
             disabled={!isDone}
-            onClick={(_e) => setStage(2)}
+            onClick={(_e) => setStage(3)}
           >
             Next
           </button>
@@ -350,12 +350,12 @@ const Stage3 = (): JSX.Element => {
       </div>
       <div style={styleBottom}>
         <div>
-          <button role="button" onClick={(_e) => setStage(1)}>
+          <button role="button" onClick={(_e) => setStage(2)}>
             Back
           </button>
         </div>
         <div>
-          <button role="button" onClick={(_e) => setStage(0)}>
+          <button role="button" onClick={(_e) => setStage(1)}>
             Done
           </button>
         </div>
