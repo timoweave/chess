@@ -335,23 +335,19 @@ const Stage2 = (): JSX.Element => {
 const Stage3 = (): JSX.Element => {
   const { setStage } = useChess();
 
-  const styleBody: React.CSSProperties = {
-    width: '100%',
-  };
-
-  const styleBottom: React.CSSProperties = {
+  const style: React.CSSProperties = {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, 1fr)',
     width: '100%',
   };
 
   return (
-    <div style={styleBody}>
+    <div>
       <div>
         <h2>Thank you! Your Steps</h2>
         <Steps />
       </div>
-      <div style={styleBottom}>
+      <div style={style}>
         <div>
           <button role="button" onClick={(_e) => setStage(2)}>
             Back
