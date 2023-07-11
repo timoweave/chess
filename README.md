@@ -5,6 +5,12 @@
 1. able go next step when the condition is met
 1. able to back track a step (undo selected step)
 1. only allow adjacent step to be selected
+1. able to select block with keyboard key `ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`
+1. able to use react router to go betweem `/setup`, `/play`, `/thankyou`
+
+# Demo
+A quick demo of using the chessboard
+[![chessboard demo video](doc/chess_play.png)](https://youtu.be/5t0-br1tnFM)
 
 # React Hooks
 1. states
@@ -34,18 +40,18 @@
 # Components
 1. `<RouterProvider>`
    1. `<ChessProvider>`
-      1. `/`: `<Stage1>`
-      1. `/setup`: `<Stage1>`
-      1. `/play`: `<Stage2>`
+      1. `/setup`: `<Setup>`
+      1. `/play`: `<Play>`
          1. `<Blocks><BlockMemo>...</Blocks>`
          1. `<SelectedBlocks><SelectedBlockMemo>...</SelectedBlocks>`
-      1. `/result`: `<Stage3>`
+      1. `/thankyou`: `<Thankyou>`
          1. `<SelectedSteps>`
+      1. `/*`: `<Play>`
 
 # Styles Helpers
-1. `<Stage1>`: use `STAGE1_*STYLE`
-1. `<Stage2>`: use `STAGE2_*STYLE`, `stage2Style()`
-1. `<Stage3>`: use `STAGE3_STYLE`
+1. `<Setup>`: use `SETUP_*STYLE`
+1. `<Play>`: use `PLAY_*STYLE`, `PlayStyle()`
+1. `<Thankyou>`: use `THANKYOU_STYLE`
 
 # Screenshots
 

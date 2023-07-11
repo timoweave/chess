@@ -1,5 +1,4 @@
-import { useNavigate } from 'react-router-dom';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom';
 
 import React, {
   memo,
@@ -402,7 +401,7 @@ const step1ChangeMaxSteps = (
   setSelectedSteps([]);
 };
 
-const STAGE1_STYLE: React.CSSProperties = {
+const SETUP_STYLE: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(2, 1fr)',
   gridTemplateRows: 'repeat(3, 1fr)',
@@ -414,53 +413,53 @@ const STAGE1_STYLE: React.CSSProperties = {
   gap: '10px',
 };
 
-const STAGE1_SIZE_LABEL_STYLE: React.CSSProperties = {
+const SETUP_SIZE_LABEL_STYLE: React.CSSProperties = {
   gridArea: 'size_label',
   placeSelf: 'center start',
 };
 
-const STAGE1_SIZE_INPUT_STYLE: React.CSSProperties = {
+const SETUP_SIZE_INPUT_STYLE: React.CSSProperties = {
   gridArea: 'size_input',
 };
 
-const STAGE1_MAX_STEPS_LABEL_STYLE: React.CSSProperties = {
+const SETUP_MAX_STEPS_LABEL_STYLE: React.CSSProperties = {
   gridArea: 'max_steps_label',
   placeSelf: 'center start',
 };
 
-const STAGE1_MAX_STEPS_INPUT_STYLE: React.CSSProperties = {
+const SETUP_MAX_STEPS_INPUT_STYLE: React.CSSProperties = {
   gridArea: 'max_steps_input',
 };
 
-const STAGE1_NEXT_BUTTON_STYLE: React.CSSProperties = {
+const SETUP_NEXT_BUTTON_STYLE: React.CSSProperties = {
   gridArea: 'next',
 };
 
-const Stage1 = (): JSX.Element => {
+const Setup = (): JSX.Element => {
   const chess = useChess();
   const { size, maxSteps } = chess;
   const navigate = useNavigate();
 
   return (
-    <div style={STAGE1_STYLE}>
-      <div style={STAGE1_SIZE_LABEL_STYLE}>Chess Board Size (nxn)</div>
+    <div style={SETUP_STYLE}>
+      <div style={SETUP_SIZE_LABEL_STYLE}>Chess Board Size (nxn)</div>
       <input
-        style={STAGE1_SIZE_INPUT_STYLE}
+        style={SETUP_SIZE_INPUT_STYLE}
         placeholder="size (nxn)"
         type="number"
         value={size ?? 0}
         onChange={(e) => step1ChangeSize(e, chess)}
       ></input>
-      <div style={STAGE1_MAX_STEPS_LABEL_STYLE}>Number of available steps</div>
+      <div style={SETUP_MAX_STEPS_LABEL_STYLE}>Number of available steps</div>
       <input
-        style={STAGE1_MAX_STEPS_INPUT_STYLE}
+        style={SETUP_MAX_STEPS_INPUT_STYLE}
         placeholder="max steps"
         type="number"
         value={maxSteps}
         onChange={(e) => step1ChangeMaxSteps(e, chess)}
       ></input>
       <button
-        style={STAGE1_NEXT_BUTTON_STYLE}
+        style={SETUP_NEXT_BUTTON_STYLE}
         role="button"
         disabled={size <= 0 || maxSteps <= 0}
         onClick={() => {
@@ -473,12 +472,12 @@ const Stage1 = (): JSX.Element => {
   );
 };
 
-const STAGE2_STYLE: React.CSSProperties = {
+const PLAY_STYLE: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: `repeat(3, 1fr)`,
 };
 
-const stage2Style = (
+const PlayStyle = (
   size: number,
   sizeChess: number,
   nxnGridArea: string,
@@ -494,7 +493,7 @@ const stage2Style = (
   margin: '0 auto',
 });
 
-const stage2onArrow = (
+const PlayonArrow = (
   chess: ChessReturn,
   key: string,
   computeNextPosition: (position: Position) => Partial<Position>,
@@ -541,14 +540,14 @@ const stage2onArrow = (
   };
 };
 
-const Stage2 = (): JSX.Element => {
+const Play = (): JSX.Element => {
   const navigate = useNavigate();
   const chess = useChess();
   const { remaingingStep, isDone, maxSteps, nxnGridArea, size, sizeChess } =
     chess;
 
   const style: React.CSSProperties = useMemo(
-    () => stage2Style(size, sizeChess, nxnGridArea),
+    () => PlayStyle(size, sizeChess, nxnGridArea),
     [size, sizeChess, nxnGridArea],
   );
 
@@ -560,10 +559,10 @@ const Stage2 = (): JSX.Element => {
   }, []);
 
   useEffect(() => {
-    const up = stage2onArrow(chess, 'ArrowUp', ({ x }) => ({ x: x - 1 }));
-    const down = stage2onArrow(chess, 'ArrowDown', ({ x }) => ({ x: x + 1 }));
-    const left = stage2onArrow(chess, 'ArrowLeft', ({ y }) => ({ y: y - 1 }));
-    const right = stage2onArrow(chess, 'ArrowRight', ({ y }) => ({ y: y + 1 }));
+    const up = PlayonArrow(chess, 'ArrowUp', ({ x }) => ({ x: x - 1 }));
+    const down = PlayonArrow(chess, 'ArrowDown', ({ x }) => ({ x: x + 1 }));
+    const left = PlayonArrow(chess, 'ArrowLeft', ({ y }) => ({ y: y - 1 }));
+    const right = PlayonArrow(chess, 'ArrowRight', ({ y }) => ({ y: y + 1 }));
 
     window.addEventListener('keydown', up);
     window.addEventListener('keydown', down);
@@ -580,7 +579,7 @@ const Stage2 = (): JSX.Element => {
 
   return (
     <div style={{ width: '100%' }}>
-      <div style={STAGE2_STYLE}>
+      <div style={PLAY_STYLE}>
         <div>
           <button
             role="button"
@@ -596,7 +595,7 @@ const Stage2 = (): JSX.Element => {
             role="button"
             disabled={!isDone}
             onClick={() => {
-              navigate('/result');
+              navigate('/thankyou');
             }}
           >
             Next
@@ -614,13 +613,13 @@ const Stage2 = (): JSX.Element => {
   );
 };
 
-const STAGE3_STYLE: React.CSSProperties = {
+const THANKYOU_STYLE: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(2, 1fr)',
   width: '100%',
 };
 
-const Stage3 = (): JSX.Element => {
+const Thankyou = (): JSX.Element => {
   const navigate = useNavigate();
 
   return (
@@ -629,7 +628,7 @@ const Stage3 = (): JSX.Element => {
         <h2>Thank you! Your Steps</h2>
         <SelectedSteps />
       </div>
-      <div style={STAGE3_STYLE}>
+      <div style={THANKYOU_STYLE}>
         <div>
           <button
             role="button"
@@ -644,7 +643,7 @@ const Stage3 = (): JSX.Element => {
           <button
             role="button"
             onClick={() => {
-              navigate('/');
+              navigate('/setup');
             }}
           >
             START OVER
@@ -655,31 +654,17 @@ const Stage3 = (): JSX.Element => {
   );
 };
 
-type TopPathType = '/' | '/setup' | '/play' | '/result';
-
-const TOP_ROUTER = createBrowserRouter([
-  {
-    path: '/' as TopPathType,
-    element: <Stage1 />,
-  },
-  {
-    path: '/setup' as TopPathType,
-    element: <Stage1 />,
-  },
-  {
-    path: '/play' as TopPathType,
-    element: <Stage2 />,
-  },
-  {
-    path: '/result' as TopPathType,
-    element: <Stage3 />,
-  },
-]);
-
 export const Top = (): JSX.Element => {
   return (
     <ChessProvider>
-      <RouterProvider router={TOP_ROUTER} />
+      <BrowserRouter basename="/">
+        <Routes>
+          <Route Component={Setup} path="setup" />
+          <Route Component={Play} path="play" />
+          <Route Component={Thankyou} path="thankyou" />
+          <Route Component={Play} path="*"/>
+        </Routes>
+      </BrowserRouter>
     </ChessProvider>
   );
 };
