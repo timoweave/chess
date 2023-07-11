@@ -8,6 +8,7 @@ import React, {
   useMemo,
   useState,
   StrictMode,
+  useEffect,
 } from 'react';
 
 const EMPTY_FUNCTION = () => {
@@ -28,7 +29,6 @@ const getPositionKey = (position?: Position): string => {
 };
 
 const useChessContext = () => {
-  const [stage, setStage] = useState<1 | 2 | 3>(1);
   const [size, setSize] = useState<number>(10);
   const [maxSteps, setMaxSteps] = useState<number>(10);
   const [selectedSteps, setSelectedSteps] = useState<Position[]>([]);
@@ -122,8 +122,6 @@ const useChessContext = () => {
     nxn,
     nxnGridArea,
     isDone,
-    stage,
-    setStage,
     sizeChess,
     sizeBlock,
   };
@@ -150,6 +148,17 @@ const getBlockSelectedIndex = (props: {
   const { position, steps } = props;
   const { x, y } = position;
   return steps.findIndex((step_i) => step_i.x === x && step_i.y === y);
+};
+
+const isPositionEqual = (
+  a: Position | undefined,
+  b: Position | undefined,
+): boolean => {
+  if (a == null || b == null) {
+    return false;
+  }
+
+  return a.x === b.x && a.y === b.y;
 };
 
 const isPositionAdjacent = (
@@ -211,8 +220,6 @@ const USE_CHESS_DEFAULT: ChessReturn = {
   setSelectedSteps: EMPTY_FUNCTION,
   nxn: [],
   isDone: false,
-  stage: 1,
-  setStage: EMPTY_FUNCTION,
   lastSelectedStep: undefined,
   lastSelectedStepAdjacentSteps: new Map<string, Position>(),
   sizeChess: 0,
@@ -369,7 +376,7 @@ const step1ChangeSize = (
   e: React.ChangeEvent<HTMLInputElement>,
   chess: ChessReturn,
 ): void => {
-  const { setSize } = chess;
+  const { setSize, setSelectedSteps } = chess;
   let nextValue: number;
   try {
     nextValue = parseInt(e.target.value, 10);
@@ -377,12 +384,14 @@ const step1ChangeSize = (
     nextValue = 0;
   }
   setSize(nextValue);
+  setSelectedSteps([]);
 };
 
 const step1ChangeMaxSteps = (
   e: React.ChangeEvent<HTMLInputElement>,
-  setMaxSteps: React.Dispatch<React.SetStateAction<number>>,
+  chess: ChessReturn,
 ): void => {
+  const { setMaxSteps, setSelectedSteps } = chess;
   let nextValue: number;
   try {
     nextValue = parseInt(e.target.value, 10);
@@ -390,6 +399,7 @@ const step1ChangeMaxSteps = (
     nextValue = 0;
   }
   setMaxSteps(nextValue);
+  setSelectedSteps([]);
 };
 
 const STAGE1_STYLE: React.CSSProperties = {
@@ -428,7 +438,7 @@ const STAGE1_NEXT_BUTTON_STYLE: React.CSSProperties = {
 
 const Stage1 = (): JSX.Element => {
   const chess = useChess();
-  const { size, maxSteps, setMaxSteps, setStage } = chess;
+  const { size, maxSteps, setMaxSteps } = chess;
   const navigate = useNavigate();
 
   return (
@@ -447,15 +457,13 @@ const Stage1 = (): JSX.Element => {
         placeholder="max steps"
         type="number"
         value={maxSteps}
-        onChange={(e) => step1ChangeMaxSteps(e, setMaxSteps)}
+        onChange={(e) => step1ChangeMaxSteps(e, chess)}
       ></input>
       <button
         style={STAGE1_NEXT_BUTTON_STYLE}
         role="button"
         disabled={size <= 0 || maxSteps <= 0}
         onClick={() => {
-          setFristBlockRandomly(chess);
-          setStage(2);
           navigate('/play');
         }}
       >
@@ -486,24 +494,89 @@ const stage2Style = (
   margin: '0 auto',
 });
 
+const stage2onArrow = (
+  chess: ChessReturn,
+  key: string,
+  computeNextPosition: (position: Position) => Partial<Position>,
+): ((event: KeyboardEvent) => void) => {
+  return (event: KeyboardEvent): void => {
+    const {
+      lastSelectedStep,
+      size,
+      setSelectedSteps,
+      selectedSteps,
+      remaingingStep,
+    } = chess;
+    if (event.key !== key || lastSelectedStep == null) {
+      return;
+    }
+
+    const nextSelectedStep = {
+      ...lastSelectedStep,
+      ...computeNextPosition(lastSelectedStep),
+    };
+    const { x, y } = nextSelectedStep;
+    if (x <= 0 || y <= 0 || size < x || size < y) {
+      return;
+    }
+
+    const beforeLastSelectedStep = selectedSteps.at(-2);
+    if (isPositionEqual(beforeLastSelectedStep, nextSelectedStep)) {
+      setSelectedSteps((prevSelectedSteps) =>
+        prevSelectedSteps.filter((_, i) => i !== prevSelectedSteps.length - 1),
+      );
+    }
+    if (remaingingStep === 0) {
+      return;
+    }
+
+    if (
+      selectedSteps.every((step) => !isPositionEqual(step, nextSelectedStep))
+    ) {
+      setSelectedSteps((prevSelectedSteps) => [
+        ...prevSelectedSteps,
+        nextSelectedStep,
+      ]);
+    }
+  };
+};
+
 const Stage2 = (): JSX.Element => {
   const navigate = useNavigate();
-
   const chess = useChess();
-  const {
-    setStage,
-    remaingingStep,
-    isDone,
-    maxSteps,
-    nxnGridArea,
-    size,
-    sizeChess,
-  } = chess;
+  const { remaingingStep, isDone, maxSteps, nxnGridArea, size, sizeChess } =
+    chess;
 
   const style: React.CSSProperties = useMemo(
     () => stage2Style(size, sizeChess, nxnGridArea),
     [size, sizeChess, nxnGridArea],
   );
+
+  useEffect(() => {
+    if (remaingingStep === maxSteps) {
+      setFristBlockRandomly(chess);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const up = stage2onArrow(chess, 'ArrowUp', ({ x }) => ({ x: x - 1 }));
+    const down = stage2onArrow(chess, 'ArrowDown', ({ x }) => ({ x: x + 1 }));
+    const left = stage2onArrow(chess, 'ArrowLeft', ({ y }) => ({ y: y - 1 }));
+    const right = stage2onArrow(chess, 'ArrowRight', ({ y }) => ({ y: y + 1 }));
+
+    window.addEventListener('keydown', up);
+    window.addEventListener('keydown', down);
+    window.addEventListener('keydown', left);
+    window.addEventListener('keydown', right);
+
+    return () => {
+      window.removeEventListener('keydown', up);
+      window.removeEventListener('keydown', down);
+      window.removeEventListener('keydown', left);
+      window.removeEventListener('keydown', right);
+    };
+  }, [chess]);
 
   return (
     <div style={{ width: '100%' }}>
@@ -512,7 +585,6 @@ const Stage2 = (): JSX.Element => {
           <button
             role="button"
             onClick={() => {
-              setStage(1);
               navigate('/setup');
             }}
           >
@@ -524,7 +596,6 @@ const Stage2 = (): JSX.Element => {
             role="button"
             disabled={!isDone}
             onClick={() => {
-              setStage(3);
               navigate('/result');
             }}
           >
@@ -550,7 +621,6 @@ const STAGE3_STYLE: React.CSSProperties = {
 };
 
 const Stage3 = (): JSX.Element => {
-  const { setStage } = useChess();
   const navigate = useNavigate();
 
   return (
@@ -564,7 +634,6 @@ const Stage3 = (): JSX.Element => {
           <button
             role="button"
             onClick={() => {
-              setStage(2);
               navigate('/play');
             }}
           >
@@ -575,7 +644,6 @@ const Stage3 = (): JSX.Element => {
           <button
             role="button"
             onClick={() => {
-              setStage(1);
               navigate('/');
             }}
           >
@@ -585,21 +653,6 @@ const Stage3 = (): JSX.Element => {
       </div>
     </div>
   );
-};
-
-export const Stages = (): JSX.Element => {
-  const chess = useChess();
-  const { stage } = chess;
-
-  switch (stage) {
-    case 3:
-      return <Stage3 />;
-    case 2:
-      return <Stage2 />;
-    case 1:
-    default:
-      return <Stage1 />;
-  }
 };
 
 type TopPathType = '/' | '/setup' | '/play' | '/result';
