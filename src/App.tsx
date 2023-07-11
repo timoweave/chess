@@ -438,7 +438,7 @@ const STAGE1_NEXT_BUTTON_STYLE: React.CSSProperties = {
 
 const Stage1 = (): JSX.Element => {
   const chess = useChess();
-  const { size, maxSteps, setMaxSteps } = chess;
+  const { size, maxSteps } = chess;
   const navigate = useNavigate();
 
   return (
