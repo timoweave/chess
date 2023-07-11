@@ -1,4 +1,3 @@
-// import * as ReactDOM from 'react-dom/client';
 import { useNavigate } from 'react-router-dom';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
@@ -10,7 +9,6 @@ import React, {
   useState,
   StrictMode,
 } from 'react';
-import './App.css';
 
 const EMPTY_FUNCTION = () => {
   /* */

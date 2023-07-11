@@ -59,4 +59,6 @@
 ## step3
 ![step 3](./doc/chess_step3.png)
 
-
+## re-rendering optimization
+only re-render components that is changed, as shown in the bottom two lines, which is mostly greyout (not render). a list of child `<Block/>` for parent `<Blocks>` and a list of child `<SelectedBlock/>` for parent `<SelecteBlocks/>`.
+![step 3](./doc/chess_rerendering_optimization.png)
