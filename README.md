@@ -32,15 +32,14 @@
    1. `getPositionKey`: the string representation o a `Position`
 
 # Components
-1. `<ChessProvider>`
-   1. `<Stages>`
-      1. `<Stage1>`
-      1. `<Stage2>`
-         1. `<Blocks>`
-            1. `<BlockMemo>` memo of `<Block>`
-         1. `<SelectedBlocks>`
-            1. `<SelectedBlockMemo>` memo of `<SelectedBlock>`
-      1. `<Stage3>`
+1. `<RouterProvider>`
+   1. `<ChessProvider>`
+      1. `/`: `<Stage1>`
+      1. `/setup`: `<Stage1>`
+      1. `/play`: `<Stage2>`
+         1. `<Blocks><BlockMemo>...</Blocks>`
+         1. `<SelectedBlocks><SelectedBlockMemo>...</SelectedBlocks>`
+      1. `/result`: `<Stage3>`
          1. `<SelectedSteps>`
 
 # Styles Helpers

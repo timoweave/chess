@@ -1,3 +1,7 @@
+// import * as ReactDOM from 'react-dom/client';
+import { useNavigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+
 import React, {
   memo,
   createContext,
@@ -427,6 +431,7 @@ const STAGE1_NEXT_BUTTON_STYLE: React.CSSProperties = {
 const Stage1 = (): JSX.Element => {
   const chess = useChess();
   const { size, maxSteps, setMaxSteps, setStage } = chess;
+  const navigate = useNavigate();
 
   return (
     <div style={STAGE1_STYLE}>
@@ -453,6 +458,7 @@ const Stage1 = (): JSX.Element => {
         onClick={() => {
           setFristBlockRandomly(chess);
           setStage(2);
+          navigate('/play');
         }}
       >
         Next
@@ -483,6 +489,8 @@ const stage2Style = (
 });
 
 const Stage2 = (): JSX.Element => {
+  const navigate = useNavigate();
+
   const chess = useChess();
   const {
     setStage,
@@ -503,12 +511,25 @@ const Stage2 = (): JSX.Element => {
     <div style={{ width: '100%' }}>
       <div style={STAGE2_STYLE}>
         <div>
-          <button role="button" onClick={() => setStage(1)}>
+          <button
+            role="button"
+            onClick={() => {
+              setStage(1);
+              navigate('/setup');
+            }}
+          >
             Back
           </button>
         </div>
         <div>
-          <button role="button" disabled={!isDone} onClick={() => setStage(3)}>
+          <button
+            role="button"
+            disabled={!isDone}
+            onClick={() => {
+              setStage(3);
+              navigate('/result');
+            }}
+          >
             Next
           </button>
         </div>
@@ -532,6 +553,7 @@ const STAGE3_STYLE: React.CSSProperties = {
 
 const Stage3 = (): JSX.Element => {
   const { setStage } = useChess();
+  const navigate = useNavigate();
 
   return (
     <div>
@@ -541,12 +563,24 @@ const Stage3 = (): JSX.Element => {
       </div>
       <div style={STAGE3_STYLE}>
         <div>
-          <button role="button" onClick={() => setStage(2)}>
+          <button
+            role="button"
+            onClick={() => {
+              setStage(2);
+              navigate('/play');
+            }}
+          >
             Back
           </button>
         </div>
         <div>
-          <button role="button" onClick={() => setStage(1)}>
+          <button
+            role="button"
+            onClick={() => {
+              setStage(1);
+              navigate('/');
+            }}
+          >
             START OVER
           </button>
         </div>
@@ -555,7 +589,7 @@ const Stage3 = (): JSX.Element => {
   );
 };
 
-const Stages = (): JSX.Element => {
+export const Stages = (): JSX.Element => {
   const chess = useChess();
   const { stage } = chess;
 
@@ -570,10 +604,31 @@ const Stages = (): JSX.Element => {
   }
 };
 
+type TopPathType = '/' | '/setup' | '/play' | '/result';
+
+const TOP_ROUTER = createBrowserRouter([
+  {
+    path: '/' as TopPathType,
+    element: <Stage1 />,
+  },
+  {
+    path: '/setup' as TopPathType,
+    element: <Stage1 />,
+  },
+  {
+    path: '/play' as TopPathType,
+    element: <Stage2 />,
+  },
+  {
+    path: '/result' as TopPathType,
+    element: <Stage3 />,
+  },
+]);
+
 export const Top = (): JSX.Element => {
   return (
     <ChessProvider>
-      <Stages />
+      <RouterProvider router={TOP_ROUTER} />
     </ChessProvider>
   );
 };
