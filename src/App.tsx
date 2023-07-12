@@ -62,6 +62,33 @@ export const usePositionQueryParam = (): Position | null => {
   return { x, y } as Position;
 };
 
+export const getNxN = (size: number): Position[] => {
+  const array: Position[] = [];
+  if (size == null) {
+    return array;
+  }
+
+  for (let x = 1; x <= size; x++) {
+    for (let y = 1; y <= size; y++) {
+      array.push({ x, y });
+    }
+  }
+  return array;
+};
+
+export const getNxNGridArea = (size: number): string => {
+  const area: string[] = [];
+  for (let x = 1; x <= size; x++) {
+    const row: string[] = [];
+    for (let y = 1; y <= size; y++) {
+      const position: Position = { x, y };
+      row.push(getPositionGridAreaID(position));
+    }
+    area.push(`'${row.join(' ')}'`);
+  }
+  return area.join(' ');
+};
+
 export const useChessContext = () => {
   const initPosition = usePositionQueryParam();
   const initSize = useSizeQueryParam('10');
@@ -129,32 +156,9 @@ export const useChessContext = () => {
     return remainingStep === 0;
   }, [remainingStep]);
 
-  const nxn = useMemo<Position[]>(() => {
-    const array: Position[] = [];
-    if (size == null) {
-      return array;
-    }
+  const nxn = useMemo<Position[]>(() => getNxN(size), [size]);
 
-    for (let x = 1; x <= size; x++) {
-      for (let y = 1; y <= size; y++) {
-        array.push({ x, y });
-      }
-    }
-    return array;
-  }, [size]);
-
-  const nxnGridArea = useMemo<string>(() => {
-    const area: string[] = [];
-    for (let x = 1; x <= size; x++) {
-      const row: string[] = [];
-      for (let y = 1; y <= size; y++) {
-        const position: Position = { x, y };
-        row.push(getPositionGridAreaID(position));
-      }
-      area.push(`'${row.join(' ')}'`);
-    }
-    return area.join(' ');
-  }, [size]);
+  const nxnGridArea = useMemo<string>(() => getNxNGridArea(size), [size]);
 
   return {
     size,
@@ -178,14 +182,14 @@ export type ChessReturn = ReturnType<typeof useChessContext>;
 
 export const useChess = () => useContext(ChessContext);
 
-export const useChessArrowKeys = () => {
+export const usePlayArrowKeys = () => {
   const chess = useChess();
 
   useEffect(() => {
-    const up = PlayOnArrow(chess, 'ArrowUp', ({ x }) => ({ x: x - 1 }));
-    const down = PlayOnArrow(chess, 'ArrowDown', ({ x }) => ({ x: x + 1 }));
-    const left = PlayOnArrow(chess, 'ArrowLeft', ({ y }) => ({ y: y - 1 }));
-    const right = PlayOnArrow(chess, 'ArrowRight', ({ y }) => ({ y: y + 1 }));
+    const up = playOnArrow(chess, 'ArrowUp', ({ x }) => ({ x: x - 1 }));
+    const down = playOnArrow(chess, 'ArrowDown', ({ x }) => ({ x: x + 1 }));
+    const left = playOnArrow(chess, 'ArrowLeft', ({ y }) => ({ y: y - 1 }));
+    const right = playOnArrow(chess, 'ArrowRight', ({ y }) => ({ y: y + 1 }));
 
     window.addEventListener('keydown', up);
     window.addEventListener('keydown', down);
@@ -354,6 +358,7 @@ export const SelectedBlock = (props: {
   dataTestid?: string;
   position: Position;
   chess: ChessReturn;
+  style?: React.CSSProperties;
 }): JSX.Element => {
   const { position, chess } = props;
   const dataTestid = props.dataTestid ?? SELECTED_BLOCK_TESTID.root(position);
@@ -365,8 +370,11 @@ export const SelectedBlock = (props: {
   }, [position, selectedSteps]);
 
   const style: React.CSSProperties = useMemo(
-    () => selectedBlockStyle({ sizeBlock, position }),
-    [sizeBlock, position],
+    () => ({
+      ...selectedBlockStyle({ sizeBlock, position }),
+      ...(props.style ?? {}),
+    }),
+    [sizeBlock, position, props.style],
   );
 
   return (
@@ -425,13 +433,14 @@ export const Block = (props: {
   dataTestid?: string;
   position: Position;
   chess: ChessReturn;
+  style?: React.CSSProperties;
 }): JSX.Element => {
   const { position, chess } = props;
   const dataTestid = props.dataTestid ?? BLOCK_TESTID.root(position);
   const { sizeBlock } = chess;
   const style: React.CSSProperties = useMemo(
-    () => blockStyle(position, sizeBlock),
-    [sizeBlock, position],
+    () => ({ ...blockStyle(position, sizeBlock), ...(props.style ?? {}) }),
+    [position, sizeBlock, props.style],
   );
 
   return (
@@ -610,25 +619,47 @@ export const Setup = (props: SetupProps): JSX.Element => {
 export const PLAY_STYLE: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: `repeat(3, 1fr)`,
+  alignItems: 'center',
 };
 
-export const PlayStyle = (
-  size: number,
-  sizeChess: number,
-  nxnGridArea: string,
-): React.CSSProperties => ({
-  border: '1px solid lightgrey',
-  display: 'grid',
-  gridTemplateColumns: `repeat(${size}, 1fr)`,
-  gridTemplateRows: `repeat(${size}, 1fr)`,
-  gridTemplateAreas: nxnGridArea,
-  gap: 0,
-  width: `${sizeChess}px`,
-  height: `${sizeChess}px`,
-  margin: '0 auto',
-});
+export const playBlockGridStyle = (
+  props: Partial<ChessReturn>,
+): React.CSSProperties => {
+  const { size, sizeChess, nxnGridArea } = props;
+  const style: React.CSSProperties = {
+    border: '1px solid lightgrey',
+    display: 'grid',
+    gridTemplateColumns: size == null ? '' : `repeat(${size}, 1fr)`,
+    gridTemplateRows: size !== null ? '' : `repeat(${size}, 1fr)`,
+    gap: 0,
+    width: sizeChess == null ? 0 : `${sizeChess}px`,
+    height: sizeChess == null ? 0 : `${sizeChess}px`,
+    margin: '0 auto',
+    gridTemplateAreas: nxnGridArea == null ? '' : nxnGridArea,
+  };
+  return style;
+};
 
-export const PlayOnArrow = (
+type PlayBlockGridProps = {
+  chess: ChessReturn;
+  style?: React.CSSProperties;
+  dataTestid?: string;
+  children?: React.ReactNode;
+};
+
+export const PlayBlockGrid = (props: PlayBlockGridProps): JSX.Element => {
+  const { chess } = props;
+  const dataTestid = props.dataTestid ?? PLAY_TESTID.board;
+  const style = props.style ?? playBlockGridStyle(chess);
+
+  return (
+    <div style={style} data-testid={dataTestid}>
+      {props.children ?? null}
+    </div>
+  );
+};
+
+export const playOnArrow = (
   chess: ChessReturn,
   key: string,
   computeNextPosition: (position: Position) => Partial<Position>,
@@ -691,15 +722,9 @@ export const Play = (props: PlayProps): JSX.Element => {
   const { dataTestid = PLAY_TESTID.root } = props;
   const navigate = useNavigate();
   const chess = useChess();
-  const { remainingStep, isDone, maxSteps, nxnGridArea, size, sizeChess } =
-    chess;
+  const { remainingStep, isDone, maxSteps } = chess;
 
-  const style: React.CSSProperties = useMemo(
-    () => PlayStyle(size, sizeChess, nxnGridArea),
-    [size, sizeChess, nxnGridArea],
-  );
-
-  useChessArrowKeys();
+  usePlayArrowKeys();
 
   return (
     <div style={{ width: '100%' }} data-testid={dataTestid}>
@@ -731,10 +756,10 @@ export const Play = (props: PlayProps): JSX.Element => {
           Steps left: {remainingStep}/{maxSteps}
         </div>
       </div>
-      <div style={style} data-testid={PLAY_TESTID.board}>
+      <PlayBlockGrid chess={chess} dataTestid={PLAY_TESTID.board}>
         <Blocks chess={chess} />
         <SelectedBlocks chess={chess} />
-      </div>
+      </PlayBlockGrid>
     </div>
   );
 };

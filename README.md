@@ -7,6 +7,8 @@
 1. only allow adjacent step to be selected
 1. able to select block with keyboard key `ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`
 1. able to use react router to go betweem `/setup`, `/play`, `/thankyou`
+1. add storybook for component design
+1. add playwright e2e testing
 
 # Demo
 A quick demo of using the chessboard
