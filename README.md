@@ -5,6 +5,7 @@
 1. able go next step when the condition is met
 1. able to back track a step (undo selected step)
 1. only allow adjacent step to be selected
+1. able to make re-rendering optimization so that the least component is re-rendered.
 1. able to select block with keyboard key `ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`
 1. able to use react router to go betweem `/setup`, `/play`, `/thankyou`
 1. add storybook for component design
@@ -70,3 +71,14 @@ A quick demo of using the chessboard
 ## re-rendering optimization
 only re-render components that is changed, as shown in the bottom two lines, which is mostly greyout (not render). a list of child `<Block/>` for parent `<Blocks>` and a list of child `<SelectedBlock/>` for parent `<SelecteBlocks/>`.
 ![step 3](./doc/chess_rerendering_optimization.png)
+
+## playwright e2e testing report
+1. it is easy to run typescript/playwright with vscode then from command line
+![vscode playwright extension](./doc/chess_vscode_playwright.png)
+1. create 10 tests from basic to pressing arrow key back and forth
+![playwright report](./doc/chess_playwright.png)
+
+## storybook ui components
+1. created 20+ ui component testing for various combinations
+1. some intermediate ui component is more of wrapper and does not have props to change it at the moment.
+![storybook for chessboard](./doc/chess_storybook.png)
