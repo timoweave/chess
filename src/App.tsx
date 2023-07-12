@@ -1,4 +1,11 @@
-import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom';
+/* eslint-disable react-refresh/only-export-components */
+import {
+  BrowserRouter,
+  Route,
+  Routes,
+  useNavigate,
+  useSearchParams,
+} from 'react-router-dom';
 
 import React, {
   memo,
@@ -14,12 +21,12 @@ const EMPTY_FUNCTION = () => {
   /* */
 };
 
-type Position = {
+export type Position = {
   x: number;
   y: number;
 };
 
-const getPositionKey = (position?: Position): string => {
+export const getPositionKey = (position?: Position): string => {
   if (position == null) {
     return '?.?';
   }
@@ -27,10 +34,50 @@ const getPositionKey = (position?: Position): string => {
   return `${x}.${y}`;
 };
 
-const useChessContext = () => {
-  const [size, setSize] = useState<number>(10);
-  const [maxSteps, setMaxSteps] = useState<number>(10);
-  const [selectedSteps, setSelectedSteps] = useState<Position[]>([]);
+export const getPositionGridAreaID = (
+  position: Position,
+  prefix?: string,
+): string => {
+  return `${prefix ?? 'b'}-${position.x}-${position.y}`;
+};
+
+export const useSizeQueryParam = (defaultValue: string): number => {
+  const [searchParams] = useSearchParams();
+  return parseInt(searchParams.get('n') ?? defaultValue, 10);
+};
+
+export const useMaxStepsQueryParam = (defaultValue: string): number => {
+  const [searchParams] = useSearchParams();
+  return parseInt(searchParams.get('m') ?? defaultValue, 10);
+};
+
+export const usePositionQueryParam = (): Position | null => {
+  const [searchParams] = useSearchParams();
+  const x = parseInt(searchParams.get('x') ?? '-1', 10);
+  const y = parseInt(searchParams.get('y') ?? '-1', 10);
+  if (x === -1 || y === -1) {
+    return null;
+  }
+
+  return { x, y } as Position;
+};
+
+export const useChessContext = () => {
+  const initPosition = usePositionQueryParam();
+  const initSize = useSizeQueryParam('10');
+  const initMaxSteps = useMaxStepsQueryParam('10');
+
+  const [size, setSize] = useState<number>(initSize);
+  const [maxSteps, setMaxSteps] = useState<number>(initMaxSteps);
+  const [selectedSteps, setSelectedSteps] = useState<Position[]>(() => [
+    initPosition ?? getRandomBlock(size),
+  ]);
+
+  useEffect(() => {
+    const randomPosition = getRandomBlock(size);
+    setSelectedSteps([initPosition ?? randomPosition]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [size]);
 
   const sizeBlock = useMemo(() => 60, []);
   const sizeChess = useMemo<number>(() => sizeBlock * size, [size, sizeBlock]);
@@ -73,14 +120,14 @@ const useChessContext = () => {
     return availableSteps;
   }, [size, lastSelectedStep, selectedSteps]);
 
-  const remaingingStep = useMemo<number>(
+  const remainingStep = useMemo<number>(
     () => maxSteps - selectedSteps.length,
     [selectedSteps, maxSteps],
   );
 
   const isDone = useMemo<boolean>(() => {
-    return remaingingStep === 0;
-  }, [remaingingStep]);
+    return remainingStep === 0;
+  }, [remainingStep]);
 
   const nxn = useMemo<Position[]>(() => {
     const array: Position[] = [];
@@ -101,7 +148,8 @@ const useChessContext = () => {
     for (let x = 1; x <= size; x++) {
       const row: string[] = [];
       for (let y = 1; y <= size; y++) {
-        row.push(`b-${x}-${y}`);
+        const position: Position = { x, y };
+        row.push(getPositionGridAreaID(position));
       }
       area.push(`'${row.join(' ')}'`);
     }
@@ -117,7 +165,7 @@ const useChessContext = () => {
     setSelectedSteps,
     lastSelectedStep,
     lastSelectedStepAdjacentSteps,
-    remaingingStep,
+    remainingStep,
     nxn,
     nxnGridArea,
     isDone,
@@ -126,21 +174,42 @@ const useChessContext = () => {
   };
 };
 
-type ChessReturn = ReturnType<typeof useChessContext>;
+export type ChessReturn = ReturnType<typeof useChessContext>;
 
-const useChess = () => useContext(ChessContext);
+export const useChess = () => useContext(ChessContext);
 
-const setFristBlockRandomly = (props: ChessReturn): void => {
-  const { size, setSelectedSteps } = props;
-  const step1: Position = {
+export const useChessArrowKeys = () => {
+  const chess = useChess();
+
+  useEffect(() => {
+    const up = PlayOnArrow(chess, 'ArrowUp', ({ x }) => ({ x: x - 1 }));
+    const down = PlayOnArrow(chess, 'ArrowDown', ({ x }) => ({ x: x + 1 }));
+    const left = PlayOnArrow(chess, 'ArrowLeft', ({ y }) => ({ y: y - 1 }));
+    const right = PlayOnArrow(chess, 'ArrowRight', ({ y }) => ({ y: y + 1 }));
+
+    window.addEventListener('keydown', up);
+    window.addEventListener('keydown', down);
+    window.addEventListener('keydown', left);
+    window.addEventListener('keydown', right);
+
+    return () => {
+      window.removeEventListener('keydown', up);
+      window.removeEventListener('keydown', down);
+      window.removeEventListener('keydown', left);
+      window.removeEventListener('keydown', right);
+    };
+  }, [chess]);
+};
+
+export const getRandomBlock = (size: number): Position => {
+  const step: Position = {
     x: Math.ceil(Math.random() * size),
     y: Math.ceil(Math.random() * size),
   };
-
-  setSelectedSteps([step1]);
+  return step;
 };
 
-const getBlockSelectedIndex = (props: {
+export const getBlockSelectedIndex = (props: {
   position: Position;
   steps: Position[];
 }): number => {
@@ -149,7 +218,7 @@ const getBlockSelectedIndex = (props: {
   return steps.findIndex((step_i) => step_i.x === x && step_i.y === y);
 };
 
-const isPositionEqual = (
+export const isPositionEqual = (
   a: Position | undefined,
   b: Position | undefined,
 ): boolean => {
@@ -160,7 +229,7 @@ const isPositionEqual = (
   return a.x === b.x && a.y === b.y;
 };
 
-const isPositionAdjacent = (
+export const isPositionAdjacent = (
   a: Position | undefined,
   b: Position | undefined,
 ): boolean => {
@@ -174,7 +243,7 @@ const isPositionAdjacent = (
   return isTouched;
 };
 
-const selectBlock = (props: {
+export const selectBlock = (props: {
   chess: ChessReturn;
   position: Position;
 }): void => {
@@ -193,7 +262,10 @@ const selectBlock = (props: {
   }
 };
 
-const unselectBlock = (props: { chess: ChessReturn; position: Position }) => {
+export const unselectBlock = (props: {
+  chess: ChessReturn;
+  position: Position;
+}) => {
   const { chess, position } = props;
   const { selectedSteps, setSelectedSteps, lastSelectedStep } = chess;
   if (
@@ -210,7 +282,7 @@ const unselectBlock = (props: { chess: ChessReturn; position: Position }) => {
   setSelectedSteps(nextSelectedSteps);
 };
 
-const USE_CHESS_DEFAULT: ChessReturn = {
+export const USE_CHESS_DEFAULT: ChessReturn = {
   size: 0,
   setSize: EMPTY_FUNCTION,
   maxSteps: 0,
@@ -223,13 +295,15 @@ const USE_CHESS_DEFAULT: ChessReturn = {
   lastSelectedStepAdjacentSteps: new Map<string, Position>(),
   sizeChess: 0,
   sizeBlock: 0,
-  remaingingStep: 0,
+  remainingStep: 0,
   nxnGridArea: '',
 };
 
-const ChessContext = createContext<ChessReturn>(USE_CHESS_DEFAULT);
+export const ChessContext = createContext<ChessReturn>(USE_CHESS_DEFAULT);
 
-const ChessProvider = (props: { children: JSX.Element }): JSX.Element => {
+export const ChessProvider = (props: {
+  children: JSX.Element;
+}): JSX.Element => {
   const value = useChessContext();
 
   return (
@@ -239,7 +313,7 @@ const ChessProvider = (props: { children: JSX.Element }): JSX.Element => {
   );
 };
 
-const selectedBlockStyle = (props: {
+export const selectedBlockStyle = (props: {
   position: Position;
   sizeBlock: number;
 }): React.CSSProperties => {
@@ -256,11 +330,33 @@ const selectedBlockStyle = (props: {
   };
 };
 
-const SelectedBlock = (props: {
+export const getPositionFromBlockPosition = (
+  attribute: string | undefined | null,
+): Position => {
+  if (attribute == null || attribute === '') {
+    throw new Error('attribute must be no empty string');
+  }
+  const matched = attribute.match(/.*_\D+(\d+)-(\d+)/);
+  if (matched == null) {
+    throw new Error(`${attribute} does not have position index`);
+  }
+  const [_, x, y] = matched;
+  return { x: parseInt(x, 10), y: parseInt(y, 10) } as Position;
+};
+
+export const SELECTED_BLOCK_TESTID = {
+  root: (position: Position): string =>
+    `CHESS_SELECTED_BLOCK_${getPositionGridAreaID(position, 'sb')}`,
+  selectedBlocks: /CHESS_SELECTED_BLOCK_/,
+};
+
+export const SelectedBlock = (props: {
+  dataTestid?: string;
   position: Position;
   chess: ChessReturn;
 }): JSX.Element => {
   const { position, chess } = props;
+  const dataTestid = props.dataTestid ?? SELECTED_BLOCK_TESTID.root(position);
   const { sizeBlock, selectedSteps } = chess;
 
   const index = useMemo(() => {
@@ -274,13 +370,17 @@ const SelectedBlock = (props: {
   );
 
   return (
-    <div style={style} onClick={() => unselectBlock({ chess, position })}>
+    <div
+      data-testid={dataTestid}
+      style={style}
+      onClick={() => unselectBlock({ chess, position })}
+    >
       <>{index}</>
     </div>
   );
 };
 
-const SelectedBlockMemo = memo(SelectedBlock, (prev) => {
+export const SelectedBlockMemo = memo(SelectedBlock, (prev) => {
   const {
     chess: { lastSelectedStep },
     position,
@@ -288,7 +388,7 @@ const SelectedBlockMemo = memo(SelectedBlock, (prev) => {
   return isPositionAdjacent(lastSelectedStep, position);
 });
 
-const SelectedBlocks = (props: { chess: ChessReturn }): JSX.Element => {
+export const SelectedBlocks = (props: { chess: ChessReturn }): JSX.Element => {
   const { chess } = props;
   const { selectedSteps } = chess;
 
@@ -301,7 +401,7 @@ const SelectedBlocks = (props: { chess: ChessReturn }): JSX.Element => {
   );
 };
 
-const blockStyle = (
+export const blockStyle = (
   position: Position,
   sizeBlock: number,
 ): React.CSSProperties => ({
@@ -315,11 +415,19 @@ const blockStyle = (
   gridArea: `b-${position.x}-${position.y}`,
 });
 
-const Block = (props: {
+export const BLOCK_TESTID = {
+  root: (position: Position): string =>
+    `CHESS_BLOCK_${getPositionGridAreaID(position)}`,
+  blocks: /CHESS_BLOCK_/,
+};
+
+export const Block = (props: {
+  dataTestid?: string;
   position: Position;
   chess: ChessReturn;
 }): JSX.Element => {
   const { position, chess } = props;
+  const dataTestid = props.dataTestid ?? BLOCK_TESTID.root(position);
   const { sizeBlock } = chess;
   const style: React.CSSProperties = useMemo(
     () => blockStyle(position, sizeBlock),
@@ -328,6 +436,7 @@ const Block = (props: {
 
   return (
     <div
+      data-testid={dataTestid}
       style={style}
       onClick={() => {
         selectBlock({ chess, position });
@@ -336,15 +445,16 @@ const Block = (props: {
   );
 };
 
-const BlockMemo = memo(
-  Block,
-  (_prev, curr) =>
-    !curr.chess.lastSelectedStepAdjacentSteps.has(
-      getPositionKey(curr.position),
-    ),
-);
+export const BlockMemo = memo(Block, (_prev, curr) => {
+  const {
+    chess: { lastSelectedStepAdjacentSteps },
+    position,
+  } = curr;
 
-const Blocks = (props: { chess: ChessReturn }): JSX.Element => {
+  return !lastSelectedStepAdjacentSteps.has(getPositionKey(position));
+});
+
+export const Blocks = (props: { chess: ChessReturn }): JSX.Element => {
   const { chess } = props;
   const { nxn } = chess;
 
@@ -357,13 +467,25 @@ const Blocks = (props: { chess: ChessReturn }): JSX.Element => {
   );
 };
 
-const SelectedSteps = (): JSX.Element => {
+export const SELECTED_STEPS_TESTID = {
+  root: 'CHESS_SELECTED_STEPS',
+  selectedStepLI: (i: Position): string =>
+    `CHESS_SELECTED_STEPS_${getPositionGridAreaID(i)}`,
+  selectedStepLIRegexp: /CHESS_SELECTED_STEPS_/,
+};
+
+export type SelectedStepsProps = {
+  dataTestid?: string;
+};
+
+export const SelectedSteps = (props: SelectedStepsProps): JSX.Element => {
+  const { dataTestid = SELECTED_STEPS_TESTID.root } = props;
   const { selectedSteps } = useChess();
 
   return (
-    <ol>
+    <ol data-testid={dataTestid}>
       {selectedSteps.map((step_i, i) => (
-        <li key={i}>
+        <li data-testid={SELECTED_STEPS_TESTID.selectedStepLI(step_i)} key={i}>
           ({step_i.x}, {step_i.y})
         </li>
       ))}
@@ -371,11 +493,11 @@ const SelectedSteps = (): JSX.Element => {
   );
 };
 
-const step1ChangeSize = (
+export const setupChangeSize = (
   e: React.ChangeEvent<HTMLInputElement>,
   chess: ChessReturn,
 ): void => {
-  const { setSize, setSelectedSteps } = chess;
+  const { setSize } = chess;
   let nextValue: number;
   try {
     nextValue = parseInt(e.target.value, 10);
@@ -383,14 +505,13 @@ const step1ChangeSize = (
     nextValue = 0;
   }
   setSize(nextValue);
-  setSelectedSteps([]);
 };
 
-const step1ChangeMaxSteps = (
+export const setupChangeMaxSteps = (
   e: React.ChangeEvent<HTMLInputElement>,
   chess: ChessReturn,
 ): void => {
-  const { setMaxSteps, setSelectedSteps } = chess;
+  const { setMaxSteps } = chess;
   let nextValue: number;
   try {
     nextValue = parseInt(e.target.value, 10);
@@ -398,10 +519,9 @@ const step1ChangeMaxSteps = (
     nextValue = 0;
   }
   setMaxSteps(nextValue);
-  setSelectedSteps([]);
 };
 
-const SETUP_STYLE: React.CSSProperties = {
+export const SETUP_STYLE: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(2, 1fr)',
   gridTemplateRows: 'repeat(3, 1fr)',
@@ -413,52 +533,67 @@ const SETUP_STYLE: React.CSSProperties = {
   gap: '10px',
 };
 
-const SETUP_SIZE_LABEL_STYLE: React.CSSProperties = {
+export const SETUP_SIZE_LABEL_STYLE: React.CSSProperties = {
   gridArea: 'size_label',
   placeSelf: 'center start',
 };
 
-const SETUP_SIZE_INPUT_STYLE: React.CSSProperties = {
+export const SETUP_SIZE_INPUT_STYLE: React.CSSProperties = {
   gridArea: 'size_input',
 };
 
-const SETUP_MAX_STEPS_LABEL_STYLE: React.CSSProperties = {
+export const SETUP_MAX_STEPS_LABEL_STYLE: React.CSSProperties = {
   gridArea: 'max_steps_label',
   placeSelf: 'center start',
 };
 
-const SETUP_MAX_STEPS_INPUT_STYLE: React.CSSProperties = {
+export const SETUP_MAX_STEPS_INPUT_STYLE: React.CSSProperties = {
   gridArea: 'max_steps_input',
 };
 
-const SETUP_NEXT_BUTTON_STYLE: React.CSSProperties = {
+export const SETUP_NEXT_BUTTON_STYLE: React.CSSProperties = {
   gridArea: 'next',
 };
 
-const Setup = (): JSX.Element => {
+export const SETUP_TESTID = {
+  root: 'CHESS_SETUP',
+  size: 'CHESS_SETUP_SIZE',
+  maxSteps: 'CHESS_SETUP_MAX_STEPS',
+  next: 'CHESS_SETUP_NEXT',
+};
+
+export type SetupProps = {
+  dataTestid?: string;
+};
+
+export const Setup = (props: SetupProps): JSX.Element => {
+  const { dataTestid = SETUP_TESTID.root } = props;
   const chess = useChess();
   const { size, maxSteps } = chess;
   const navigate = useNavigate();
 
   return (
-    <div style={SETUP_STYLE}>
+    <div data-testid={dataTestid} style={SETUP_STYLE}>
       <div style={SETUP_SIZE_LABEL_STYLE}>Chess Board Size (nxn)</div>
       <input
+        data-testid={SETUP_TESTID.size}
         style={SETUP_SIZE_INPUT_STYLE}
         placeholder="size (nxn)"
         type="number"
         value={size ?? 0}
-        onChange={(e) => step1ChangeSize(e, chess)}
+        onChange={(e) => setupChangeSize(e, chess)}
       ></input>
       <div style={SETUP_MAX_STEPS_LABEL_STYLE}>Number of available steps</div>
       <input
+        data-testid={SETUP_TESTID.maxSteps}
         style={SETUP_MAX_STEPS_INPUT_STYLE}
         placeholder="max steps"
         type="number"
         value={maxSteps}
-        onChange={(e) => step1ChangeMaxSteps(e, chess)}
+        onChange={(e) => setupChangeMaxSteps(e, chess)}
       ></input>
       <button
+        data-testid={SETUP_TESTID.next}
         style={SETUP_NEXT_BUTTON_STYLE}
         role="button"
         disabled={size <= 0 || maxSteps <= 0}
@@ -472,12 +607,12 @@ const Setup = (): JSX.Element => {
   );
 };
 
-const PLAY_STYLE: React.CSSProperties = {
+export const PLAY_STYLE: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: `repeat(3, 1fr)`,
 };
 
-const PlayStyle = (
+export const PlayStyle = (
   size: number,
   sizeChess: number,
   nxnGridArea: string,
@@ -493,7 +628,7 @@ const PlayStyle = (
   margin: '0 auto',
 });
 
-const PlayonArrow = (
+export const PlayOnArrow = (
   chess: ChessReturn,
   key: string,
   computeNextPosition: (position: Position) => Partial<Position>,
@@ -504,7 +639,7 @@ const PlayonArrow = (
       size,
       setSelectedSteps,
       selectedSteps,
-      remaingingStep,
+      remainingStep,
     } = chess;
     if (event.key !== key || lastSelectedStep == null) {
       return;
@@ -525,7 +660,7 @@ const PlayonArrow = (
         prevSelectedSteps.filter((_, i) => i !== prevSelectedSteps.length - 1),
       );
     }
-    if (remaingingStep === 0) {
+    if (remainingStep === 0) {
       return;
     }
 
@@ -540,10 +675,23 @@ const PlayonArrow = (
   };
 };
 
-const Play = (): JSX.Element => {
+export const PLAY_TESTID = {
+  root: 'CHESS_PLAY',
+  back: 'CHESS_BACK',
+  next: 'CHESS_NEXT',
+  remainingStep: 'CHESS_REMAINING_STEP',
+  board: 'CHESS_BOARD',
+};
+
+export type PlayProps = {
+  dataTestid?: string;
+};
+
+export const Play = (props: PlayProps): JSX.Element => {
+  const { dataTestid = PLAY_TESTID.root } = props;
   const navigate = useNavigate();
   const chess = useChess();
-  const { remaingingStep, isDone, maxSteps, nxnGridArea, size, sizeChess } =
+  const { remainingStep, isDone, maxSteps, nxnGridArea, size, sizeChess } =
     chess;
 
   const style: React.CSSProperties = useMemo(
@@ -551,38 +699,15 @@ const Play = (): JSX.Element => {
     [size, sizeChess, nxnGridArea],
   );
 
-  useEffect(() => {
-    if (remaingingStep === maxSteps) {
-      setFristBlockRandomly(chess);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const up = PlayonArrow(chess, 'ArrowUp', ({ x }) => ({ x: x - 1 }));
-    const down = PlayonArrow(chess, 'ArrowDown', ({ x }) => ({ x: x + 1 }));
-    const left = PlayonArrow(chess, 'ArrowLeft', ({ y }) => ({ y: y - 1 }));
-    const right = PlayonArrow(chess, 'ArrowRight', ({ y }) => ({ y: y + 1 }));
-
-    window.addEventListener('keydown', up);
-    window.addEventListener('keydown', down);
-    window.addEventListener('keydown', left);
-    window.addEventListener('keydown', right);
-
-    return () => {
-      window.removeEventListener('keydown', up);
-      window.removeEventListener('keydown', down);
-      window.removeEventListener('keydown', left);
-      window.removeEventListener('keydown', right);
-    };
-  }, [chess]);
+  useChessArrowKeys();
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%' }} data-testid={dataTestid}>
       <div style={PLAY_STYLE}>
         <div>
           <button
             role="button"
+            data-testid={PLAY_TESTID.back}
             onClick={() => {
               navigate('/setup');
             }}
@@ -594,6 +719,7 @@ const Play = (): JSX.Element => {
           <button
             role="button"
             disabled={!isDone}
+            data-testid={PLAY_TESTID.next}
             onClick={() => {
               navigate('/thankyou');
             }}
@@ -601,11 +727,11 @@ const Play = (): JSX.Element => {
             Next
           </button>
         </div>
-        <div>
-          Steps left: {remaingingStep}/{maxSteps}
+        <div data-testid={PLAY_TESTID.remainingStep}>
+          Steps left: {remainingStep}/{maxSteps}
         </div>
       </div>
-      <div style={style}>
+      <div style={style} data-testid={PLAY_TESTID.board}>
         <Blocks chess={chess} />
         <SelectedBlocks chess={chess} />
       </div>
@@ -613,24 +739,38 @@ const Play = (): JSX.Element => {
   );
 };
 
-const THANKYOU_STYLE: React.CSSProperties = {
+export const THANKYOU_STYLE: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(2, 1fr)',
   width: '100%',
 };
 
-const Thankyou = (): JSX.Element => {
+export const THANKYOU_TESTID = {
+  root: 'CHESS_THANKYOU',
+  selectedStepOL: 'CHESS_THANKYOU_SELECTED_STEPS',
+  back: 'CHESS_THANKYOU_BACK',
+  startOver: 'CHESS_THANKYOU_STARTOVER',
+};
+
+export type ThankyouProps = {
+  dataTestid?: string;
+};
+
+export const Thankyou = (props: ThankyouProps): JSX.Element => {
+  const { dataTestid = THANKYOU_TESTID.root } = props;
+  // const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   return (
-    <div>
+    <div data-testid={dataTestid}>
       <div>
         <h2>Thank you! Your Steps</h2>
-        <SelectedSteps />
+        <SelectedSteps dataTestid={THANKYOU_TESTID.selectedStepOL} />
       </div>
       <div style={THANKYOU_STYLE}>
         <div>
           <button
+            data-testid={THANKYOU_TESTID.back}
             role="button"
             onClick={() => {
               navigate('/play');
@@ -641,6 +781,7 @@ const Thankyou = (): JSX.Element => {
         </div>
         <div>
           <button
+            data-testid={THANKYOU_TESTID.startOver}
             role="button"
             onClick={() => {
               navigate('/setup');
@@ -656,16 +797,16 @@ const Thankyou = (): JSX.Element => {
 
 export const Top = (): JSX.Element => {
   return (
-    <ChessProvider>
-      <BrowserRouter basename="/">
+    <BrowserRouter basename="/">
+      <ChessProvider>
         <Routes>
           <Route Component={Setup} path="setup" />
-          <Route Component={Play} path="play" />
+          <Route Component={Play} path="play?size" />
           <Route Component={Thankyou} path="thankyou" />
-          <Route Component={Play} path="*"/>
+          <Route Component={Play} path="*" />
         </Routes>
-      </BrowserRouter>
-    </ChessProvider>
+      </ChessProvider>
+    </BrowserRouter>
   );
 };
 

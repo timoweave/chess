@@ -29,7 +29,7 @@ A quick demo of using the chessboard
    1. `lastSelectedStep`: last recently selected block
    1. `lastSelectedStepAdjacentSteps`: adjacent blocks around the last recently selected block
 1. helper functions
-   1. `setFristBlockRandomly`: pick a random block (or position)
+   1. `getRandomBlock`: pick a random block (or position)
    1. `isBlockSelected`: if the block is already selected
    1. `getBlockSelectedIndex`: get the inde for block (or position) from the selected steps (blocks or positions).
    1. `clickBlock`: select block if the block is adjacent the the recent selected block and is not selected yet.
