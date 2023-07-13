@@ -6,14 +6,12 @@ import {
   useNavigate,
   useSearchParams,
 } from 'react-router-dom';
-
 import React, {
   memo,
   createContext,
   useContext,
   useMemo,
   useState,
-  StrictMode,
   useEffect,
 } from 'react';
 
@@ -62,6 +60,11 @@ export const usePositionQueryParam = (): Position | null => {
   return { x, y } as Position;
 };
 
+export const useCurrentQueryParams = () => {
+  const [searchParams] = useSearchParams();
+  return searchParams.toString();
+};
+
 export const getNxN = (size: number): Position[] => {
   const array: Position[] = [];
   if (size == null) {
@@ -89,22 +92,20 @@ export const getNxNGridArea = (size: number): string => {
   return area.join(' ');
 };
 
-export const useChessContext = () => {
-  const initPosition = usePositionQueryParam();
-  const initSize = useSizeQueryParam('10');
-  const initMaxSteps = useMaxStepsQueryParam('10');
+export type UseChessContextProps = {
+  initSize: ReturnType<typeof useSizeQueryParam>;
+  initMaxSteps: ReturnType<typeof useMaxStepsQueryParam>;
+  initPosition: ReturnType<typeof usePositionQueryParam>;
+};
+
+export const useChessContext = (props: UseChessContextProps) => {
+  const { initSize, initMaxSteps, initPosition } = props;
 
   const [size, setSize] = useState<number>(initSize);
   const [maxSteps, setMaxSteps] = useState<number>(initMaxSteps);
   const [selectedSteps, setSelectedSteps] = useState<Position[]>(() => [
     initPosition ?? getRandomBlock(size),
   ]);
-
-  useEffect(() => {
-    const randomPosition = getRandomBlock(size);
-    setSelectedSteps([initPosition ?? randomPosition]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [size]);
 
   const sizeBlock = useMemo(() => 60, []);
   const sizeChess = useMemo<number>(() => sizeBlock * size, [size, sizeBlock]);
@@ -160,6 +161,19 @@ export const useChessContext = () => {
 
   const nxnGridArea = useMemo<string>(() => getNxNGridArea(size), [size]);
 
+  useEffect(() => {
+    const randomPosition = getRandomBlock(size);
+    setSelectedSteps([initPosition ?? randomPosition]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [size]);
+
+  useEffect(() => {
+    if (selectedSteps.length > 0) {
+      return;
+    }
+    setSelectedSteps([getRandomBlock(size)]);
+  }, [size, selectedSteps.length]);
+
   return {
     size,
     setSize,
@@ -181,29 +195,6 @@ export const useChessContext = () => {
 export type ChessReturn = ReturnType<typeof useChessContext>;
 
 export const useChess = () => useContext(ChessContext);
-
-export const usePlayArrowKeys = () => {
-  const chess = useChess();
-
-  useEffect(() => {
-    const up = playOnArrow(chess, 'ArrowUp', ({ x }) => ({ x: x - 1 }));
-    const down = playOnArrow(chess, 'ArrowDown', ({ x }) => ({ x: x + 1 }));
-    const left = playOnArrow(chess, 'ArrowLeft', ({ y }) => ({ y: y - 1 }));
-    const right = playOnArrow(chess, 'ArrowRight', ({ y }) => ({ y: y + 1 }));
-
-    window.addEventListener('keydown', up);
-    window.addEventListener('keydown', down);
-    window.addEventListener('keydown', left);
-    window.addEventListener('keydown', right);
-
-    return () => {
-      window.removeEventListener('keydown', up);
-      window.removeEventListener('keydown', down);
-      window.removeEventListener('keydown', left);
-      window.removeEventListener('keydown', right);
-    };
-  }, [chess]);
-};
 
 export const getRandomBlock = (size: number): Position => {
   const step: Position = {
@@ -245,6 +236,10 @@ export const isPositionAdjacent = (
   const distanceY = Math.abs(a.y - b.y);
   const isTouched = Math.max(distanceX, distanceY) <= 1;
   return isTouched;
+};
+
+export const resetSelectedSteps = (props: { chess: ChessReturn }): void => {
+  props.chess.setSelectedSteps([]);
 };
 
 export const selectBlock = (props: {
@@ -305,14 +300,27 @@ export const USE_CHESS_DEFAULT: ChessReturn = {
 
 export const ChessContext = createContext<ChessReturn>(USE_CHESS_DEFAULT);
 
+export type ChessProviderProps = Parameters<typeof ChessProvider>[0];
+
 export const ChessProvider = (props: {
-  children: JSX.Element;
+  initSize?: number;
+  initMaxSteps?: number;
+  initPosition?: Position;
+  children?: React.ReactNode;
 }): JSX.Element => {
-  const value = useChessContext();
+  const SizeQueryParam = useSizeQueryParam('10');
+  const MaxStepsQueryParam = useMaxStepsQueryParam('10');
+  const PositionQueryParam = usePositionQueryParam();
+
+  const initSize = props.initSize ?? SizeQueryParam;
+  const initMaxSteps = props.initMaxSteps ?? MaxStepsQueryParam;
+  const initPosition = props.initPosition ?? PositionQueryParam;
+
+  const value = useChessContext({ initPosition, initSize, initMaxSteps });
 
   return (
     <ChessContext.Provider value={value}>
-      <>{props.children}</>
+      <>{props.children ?? null}</>
     </ChessContext.Provider>
   );
 };
@@ -579,6 +587,7 @@ export const Setup = (props: SetupProps): JSX.Element => {
   const { dataTestid = SETUP_TESTID.root } = props;
   const chess = useChess();
   const { size, maxSteps } = chess;
+  const search = useCurrentQueryParams();
   const navigate = useNavigate();
 
   return (
@@ -607,7 +616,7 @@ export const Setup = (props: SetupProps): JSX.Element => {
         role="button"
         disabled={size <= 0 || maxSteps <= 0}
         onClick={() => {
-          navigate('/play');
+          navigate({ pathname: '/play', search });
         }}
       >
         Next
@@ -618,7 +627,7 @@ export const Setup = (props: SetupProps): JSX.Element => {
 
 export const PLAY_STYLE: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: `repeat(3, 1fr)`,
+  gridTemplateColumns: `repeat(4, 1fr)`,
   alignItems: 'center',
 };
 
@@ -659,59 +668,104 @@ export const PlayBlockGrid = (props: PlayBlockGridProps): JSX.Element => {
   );
 };
 
-export const playOnArrow = (
+export const pressArrow = (
   chess: ChessReturn,
-  key: string,
   computeNextPosition: (position: Position) => Partial<Position>,
+) => {
+  const {
+    lastSelectedStep,
+    size,
+    setSelectedSteps,
+    selectedSteps,
+    remainingStep,
+  } = chess;
+  console.log({ a: 1, lastSelectedStep });
+  if (lastSelectedStep == null) {
+    return;
+  }
+
+  const soonSelectedStep = computeNextPosition(lastSelectedStep);
+  const nextSelectedStep = {
+    ...lastSelectedStep,
+    ...soonSelectedStep,
+  };
+
+  const { x, y } = nextSelectedStep;
+  console.log({ a: 2, soonSelectedStep, lastSelectedStep });
+  if (x <= 0 || y <= 0 || size < x || size < y) {
+    return;
+  }
+
+  const beforeLastSelectedStep = selectedSteps.at(-2);
+  if (isPositionEqual(beforeLastSelectedStep, nextSelectedStep)) {
+    console.log({ a: 3, pop: 'pop' });
+    setSelectedSteps((prevSelectedSteps) =>
+      prevSelectedSteps.filter((_, i) => i !== prevSelectedSteps.length - 1),
+    );
+  }
+  console.log({ a: 4 });
+  if (remainingStep === 0) {
+    return;
+  }
+  console.log({ a: 5 });
+  if (selectedSteps.every((step) => !isPositionEqual(step, nextSelectedStep))) {
+    console.log({ a: 6, new: 'new' });
+    setSelectedSteps((prevSelectedSteps) => [
+      ...prevSelectedSteps,
+      nextSelectedStep,
+    ]);
+  }
+};
+
+export const pressArrowUp = (chess: ChessReturn): void => {
+  console.log({ a: 'up' });
+  pressArrow(chess, ({ x }) => ({ x: x - 1 }));
+};
+
+export const pressArrowDown = (chess: ChessReturn): void => {
+  console.log({ a: 'down' });
+  pressArrow(chess, ({ x }) => ({ x: x + 1 }));
+};
+
+export const pressArrowLeft = (chess: ChessReturn): void => {
+  console.log({ a: 'left' });
+  pressArrow(chess, ({ y }) => ({ y: y - 1 }));
+};
+
+export const pressArrowRight = (chess: ChessReturn): void => {
+  console.log({ a: 'right' });
+  pressArrow(chess, ({ y }) => ({ y: y + 1 }));
+};
+
+export const onPressArrow = (
+  chess: ChessReturn,
 ): ((event: KeyboardEvent) => void) => {
   return (event: KeyboardEvent): void => {
-    const {
-      lastSelectedStep,
-      size,
-      setSelectedSteps,
-      selectedSteps,
-      remainingStep,
-    } = chess;
-    if (event.key !== key || lastSelectedStep == null) {
-      return;
-    }
-
-    const nextSelectedStep = {
-      ...lastSelectedStep,
-      ...computeNextPosition(lastSelectedStep),
-    };
-    const { x, y } = nextSelectedStep;
-    if (x <= 0 || y <= 0 || size < x || size < y) {
-      return;
-    }
-
-    const beforeLastSelectedStep = selectedSteps.at(-2);
-    if (isPositionEqual(beforeLastSelectedStep, nextSelectedStep)) {
-      setSelectedSteps((prevSelectedSteps) =>
-        prevSelectedSteps.filter((_, i) => i !== prevSelectedSteps.length - 1),
-      );
-    }
-    if (remainingStep === 0) {
-      return;
-    }
-
-    if (
-      selectedSteps.every((step) => !isPositionEqual(step, nextSelectedStep))
-    ) {
-      setSelectedSteps((prevSelectedSteps) => [
-        ...prevSelectedSteps,
-        nextSelectedStep,
-      ]);
+    switch (event.key) {
+      case 'ArrowUp':
+        pressArrowUp(chess);
+        return;
+      case 'ArrowDown':
+        pressArrowDown(chess);
+        return;
+      case 'ArrowLeft':
+        pressArrowLeft(chess);
+        return;
+      case 'ArrowRight':
+        pressArrowRight(chess);
+        return;
+      default:
     }
   };
 };
 
 export const PLAY_TESTID = {
   root: 'CHESS_PLAY',
-  back: 'CHESS_BACK',
-  next: 'CHESS_NEXT',
-  remainingStep: 'CHESS_REMAINING_STEP',
-  board: 'CHESS_BOARD',
+  back: 'CHESS_PLAY_BACK',
+  reset: 'CHESS_PLAY_RESET',
+  next: 'CHESS_PLAY_NEXT',
+  remainingStep: 'CHESS_PLAY_REMAINING_STEP',
+  board: 'CHESS_PLAY_BOARD',
 };
 
 export type PlayProps = {
@@ -720,11 +774,18 @@ export type PlayProps = {
 
 export const Play = (props: PlayProps): JSX.Element => {
   const { dataTestid = PLAY_TESTID.root } = props;
+  const search = useCurrentQueryParams();
   const navigate = useNavigate();
   const chess = useChess();
   const { remainingStep, isDone, maxSteps } = chess;
 
-  usePlayArrowKeys();
+  useEffect(() => {
+    const onPressArrowCallback = onPressArrow(chess);
+    window.addEventListener('keydown', onPressArrowCallback);
+    return () => {
+      window.removeEventListener('keydown', onPressArrowCallback);
+    };
+  }, [chess]);
 
   return (
     <div style={{ width: '100%' }} data-testid={dataTestid}>
@@ -734,7 +795,7 @@ export const Play = (props: PlayProps): JSX.Element => {
             role="button"
             data-testid={PLAY_TESTID.back}
             onClick={() => {
-              navigate('/setup');
+              navigate({ pathname: '/setup', search });
             }}
           >
             Back
@@ -743,10 +804,19 @@ export const Play = (props: PlayProps): JSX.Element => {
         <div>
           <button
             role="button"
+            data-testid={PLAY_TESTID.reset}
+            onClick={() => resetSelectedSteps({ chess })}
+          >
+            Reset
+          </button>
+        </div>
+        <div>
+          <button
+            role="button"
             disabled={!isDone}
             data-testid={PLAY_TESTID.next}
             onClick={() => {
-              navigate('/thankyou');
+              navigate({ pathname: '/thankyou', search });
             }}
           >
             Next
@@ -783,7 +853,7 @@ export type ThankyouProps = {
 
 export const Thankyou = (props: ThankyouProps): JSX.Element => {
   const { dataTestid = THANKYOU_TESTID.root } = props;
-  // const [searchParams] = useSearchParams();
+  const search = useCurrentQueryParams();
   const navigate = useNavigate();
 
   return (
@@ -798,7 +868,7 @@ export const Thankyou = (props: ThankyouProps): JSX.Element => {
             data-testid={THANKYOU_TESTID.back}
             role="button"
             onClick={() => {
-              navigate('/play');
+              navigate({ pathname: '/play', search });
             }}
           >
             Back
@@ -809,7 +879,7 @@ export const Thankyou = (props: ThankyouProps): JSX.Element => {
             data-testid={THANKYOU_TESTID.startOver}
             role="button"
             onClick={() => {
-              navigate('/setup');
+              navigate({ pathname: '/setup', search });
             }}
           >
             START OVER
@@ -820,31 +890,31 @@ export const Thankyou = (props: ThankyouProps): JSX.Element => {
   );
 };
 
-export const Top = (): JSX.Element => {
+export const AppProvider = (props: ChessProviderProps): JSX.Element => {
+  const { children, initSize, initMaxSteps, initPosition } = props;
+
   return (
     <BrowserRouter basename="/">
-      <ChessProvider>
-        <Routes>
-          <Route Component={Setup} path="setup" />
-          <Route Component={Play} path="play?size" />
-          <Route Component={Thankyou} path="thankyou" />
-          <Route Component={Play} path="*" />
-        </Routes>
+      <ChessProvider
+        initSize={initSize}
+        initMaxSteps={initMaxSteps}
+        initPosition={initPosition}
+      >
+        <>{children}</>
       </ChessProvider>
     </BrowserRouter>
   );
 };
 
-export const App = (props: { isProd: boolean }): JSX.Element => {
-  const { isProd } = props;
-
-  if (isProd) {
-    return <Top />;
-  }
-
+export const App = (): JSX.Element => {
   return (
-    <StrictMode>
-      <Top />
-    </StrictMode>
+    <AppProvider>
+      <Routes>
+        <Route Component={Setup} path="setup" />
+        <Route Component={Play} path="play?size" />
+        <Route Component={Thankyou} path="thankyou" />
+        <Route Component={Play} path="*" />
+      </Routes>
+    </AppProvider>
   );
 };
