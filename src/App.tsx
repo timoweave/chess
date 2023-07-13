@@ -679,7 +679,6 @@ export const pressArrow = (
     selectedSteps,
     remainingStep,
   } = chess;
-  console.log({ a: 1, lastSelectedStep });
   if (lastSelectedStep == null) {
     return;
   }
@@ -691,25 +690,20 @@ export const pressArrow = (
   };
 
   const { x, y } = nextSelectedStep;
-  console.log({ a: 2, soonSelectedStep, lastSelectedStep });
   if (x <= 0 || y <= 0 || size < x || size < y) {
     return;
   }
 
   const beforeLastSelectedStep = selectedSteps.at(-2);
   if (isPositionEqual(beforeLastSelectedStep, nextSelectedStep)) {
-    console.log({ a: 3, pop: 'pop' });
     setSelectedSteps((prevSelectedSteps) =>
       prevSelectedSteps.filter((_, i) => i !== prevSelectedSteps.length - 1),
     );
   }
-  console.log({ a: 4 });
   if (remainingStep === 0) {
     return;
   }
-  console.log({ a: 5 });
   if (selectedSteps.every((step) => !isPositionEqual(step, nextSelectedStep))) {
-    console.log({ a: 6, new: 'new' });
     setSelectedSteps((prevSelectedSteps) => [
       ...prevSelectedSteps,
       nextSelectedStep,
@@ -718,22 +712,18 @@ export const pressArrow = (
 };
 
 export const pressArrowUp = (chess: ChessReturn): void => {
-  console.log({ a: 'up' });
   pressArrow(chess, ({ x }) => ({ x: x - 1 }));
 };
 
 export const pressArrowDown = (chess: ChessReturn): void => {
-  console.log({ a: 'down' });
   pressArrow(chess, ({ x }) => ({ x: x + 1 }));
 };
 
 export const pressArrowLeft = (chess: ChessReturn): void => {
-  console.log({ a: 'left' });
   pressArrow(chess, ({ y }) => ({ y: y - 1 }));
 };
 
 export const pressArrowRight = (chess: ChessReturn): void => {
-  console.log({ a: 'right' });
   pressArrow(chess, ({ y }) => ({ y: y + 1 }));
 };
 
