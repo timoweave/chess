@@ -173,12 +173,60 @@ test('select blocks 4x4 in 3 step with key', async ({ setup, play }) => {
   });
 });
 
-test('move around', async ({
-  setup,
-  play,
-  thankyou,
-}) => {
-  await setup.goto('?n=5&m=5&x=1&y=1');
+test('check last selected step after each move', async ({ play }) => {
+  await test.step('5x6 grid, max 20 steps, start at (1,1)', async () => {
+    await play.goto('?n=5x5&m=20&x=1&y=1');
+  });
+
+  await test.step('move right 3 times', async () => {
+    await play.next().isDisabled();
+    await play.root().press('ArrowRight');
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 1, y: 2 });
+    await play.root().press('ArrowRight');
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 1, y: 3 });
+    await play.root().press('ArrowRight');
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 1, y: 4 });
+  });
+
+  await test.step('move down 3 times', async () => {
+    await play.root().press('ArrowDown');
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 2, y: 4 });
+    await play.root().press('ArrowDown');
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 3, y: 4 });
+    await play.root().press('ArrowDown');
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 4, y: 4 });
+  });
+
+  await test.step('move left 3 times', async () => {
+    await play.root().press('ArrowLeft');
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 4, y: 3 });
+    await play.root().press('ArrowLeft');
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 4, y: 2 });
+    await play.root().press('ArrowLeft');
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 4, y: 1 });
+  });
+
+  await test.step('move up 3 times', async () => {
+    await play.root().press('ArrowUp');
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 3, y: 1 });
+    await play.root().press('ArrowUp');
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 2, y: 1 });
+  });
+
+  await test.step('move up 3 times, but it wont go up anymore, because it is blocked', async () => {
+    await play.root().press('ArrowUp'); // cannot cross
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 2, y: 1 });
+    await play.root().press('ArrowUp'); // cannot cross
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 2, y: 1 });
+    await play.root().press('ArrowUp'); // cannot cross
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 2, y: 1 });
+  });
+});
+
+test('move around', async ({ setup, play, thankyou }) => {
+  await test.step('5x5 grid, max 5 steps, start at (1,1)', async () => {
+    await setup.goto('?n=5&m=5&x=1&y=1');
+  });
 
   await test.step('setup 5x5 board with 5 step', async () => {
     await setup.root().hover();
@@ -190,9 +238,8 @@ test('move around', async ({
     expect(await setup.maxSteps().inputValue()).toEqual('5');
   });
 
-  await setup.next().click();
-
   await test.step('play', async () => {
+    await setup.next().click();
     await play.next().isDisabled();
     await play.root().press('ArrowRight');
     await play.root().press('ArrowDown');
@@ -201,8 +248,8 @@ test('move around', async ({
     await play.next().isEnabled();
   });
 
-  await play.next().click();
   await test.step('thankyou and back', async () => {
+    await play.next().click();
     await thankyou.root().hover();
     await thankyou.selectedStepOL().isVisible();
     expect(await thankyou.selectedStepLI()).toHaveLength(5);
@@ -210,95 +257,135 @@ test('move around', async ({
 });
 
 test('move right and then left', async ({ play }) => {
-  await play.goto('?n=5&m=5&x=1&y=1');
+  await test.step('5x5 grid, max 5 steps, start at (1,1)', async () => {
+    await play.goto('?n=5&m=5&x=1&y=1');
+  });
 
-  await play.next().isDisabled();
-  await play.root().press('ArrowRight');
-  await play.root().press('ArrowRight');
-  await play.root().press('ArrowRight');
-  await play.root().press('ArrowRight');
-  expect(await play.selectedBlocks()).toHaveLength(5);
-  await play.next().isEnabled();
-  expect(await play.lastSelectedBlockPosition()).toEqual({ x: 1, y: 5 });
+  await test.step('move right 4 times', async () => {
+    await play.next().isDisabled();
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 1, y: 1 });
 
-  await play.next().isEnabled();
-  await play.root().press('ArrowLeft');
-  await play.root().press('ArrowLeft');
-  await play.root().press('ArrowLeft');
-  await play.root().press('ArrowLeft');
-  expect(await play.selectedBlocks()).toHaveLength(1);
-  await play.next().isDisabled();
-  expect(await play.lastSelectedBlockPosition()).toEqual({ x: 1, y: 1 });
+    await play.root().press('ArrowRight');
+    await play.root().press('ArrowRight');
+    await play.root().press('ArrowRight');
+    await play.root().press('ArrowRight');
+
+    expect(await play.selectedBlocks()).toHaveLength(5);
+    await play.next().isEnabled();
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 1, y: 5 });
+  });
+
+  await test.step('move left 4 times', async () => {
+    await play.next().isEnabled();
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 1, y: 5 });
+
+    await play.root().press('ArrowLeft');
+    await play.root().press('ArrowLeft');
+    await play.root().press('ArrowLeft');
+    await play.root().press('ArrowLeft');
+    expect(await play.selectedBlocks()).toHaveLength(1);
+    await play.next().isDisabled();
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 1, y: 1 });
+  });
 });
 
 test('move down and then up', async ({ play }) => {
-  await play.goto('?n=5&m=5&x=1&y=1');
+  await test.step('5x5 grid, max 5 steps, start at (1,1)', async () => {
+    await play.goto('?n=5&m=5&x=1&y=1');
+  });
 
-  await play.next().isDisabled();
-  await play.root().press('ArrowDown');
-  await play.root().press('ArrowDown');
-  await play.root().press('ArrowDown');
-  await play.root().press('ArrowDown');
-  expect(await play.selectedBlocks()).toHaveLength(5);
-  await play.next().isEnabled();
-  expect(await play.lastSelectedBlockPosition()).toEqual({ x: 5, y: 1 });
+  await test.step('move down 4 times', async () => {
+    await play.next().isDisabled();
+    await play.root().press('ArrowDown');
+    await play.root().press('ArrowDown');
+    await play.root().press('ArrowDown');
+    await play.root().press('ArrowDown');
+    expect(await play.selectedBlocks()).toHaveLength(5);
+    await play.next().isEnabled();
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 5, y: 1 });
+  });
 
-  await play.root().press('ArrowUp');
-  await play.root().press('ArrowUp');
-  await play.root().press('ArrowUp');
-  await play.root().press('ArrowUp');
-  expect(await play.selectedBlocks()).toHaveLength(1);
-  await play.next().isDisabled();
-  expect(await play.lastSelectedBlockPosition()).toEqual({ x: 1, y: 1 });
+  await test.step('move up 4 times', async () => {
+    await play.root().press('ArrowUp');
+    await play.root().press('ArrowUp');
+    await play.root().press('ArrowUp');
+    await play.root().press('ArrowUp');
+    expect(await play.selectedBlocks()).toHaveLength(1);
+    await play.next().isDisabled();
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 1, y: 1 });
+  });
 });
 
 test('move diagonal downand then diagonal up', async ({ play }) => {
-  await play.goto('?n=5&m=5&x=1&y=1');
+  await test.step('5x5 grid, max 5 steps, start at (1,1)', async () => {
+    await play.goto('?n=5&m=5&x=1&y=1');
+  });
 
-  await play.next().isDisabled();
-  await play.root().press('ArrowRight');
-  await play.root().press('ArrowDown');
-  await play.root().press('ArrowRight');
-  await play.root().press('ArrowDown');
-  expect(await play.selectedBlocks()).toHaveLength(5);
-  await play.next().isEnabled();
-  expect(await play.lastSelectedBlockPosition()).toEqual({ x: 3, y: 3 });
+  await test.step('move right, down, right, down', async () => {
+    await play.next().isDisabled();
+    await play.root().press('ArrowRight');
+    await play.root().press('ArrowDown');
+    await play.root().press('ArrowRight');
+    await play.root().press('ArrowDown');
+    expect(await play.selectedBlocks()).toHaveLength(5);
+    await play.next().isEnabled();
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 3, y: 3 });
+  });
 
-  await play.root().press('ArrowUp');
-  await play.root().press('ArrowLeft');
-  await play.root().press('ArrowUp');
-  await play.root().press('ArrowLeft');
-  expect(await play.selectedBlocks()).toHaveLength(1);
-  await play.next().isDisabled();
-  expect(await play.lastSelectedBlockPosition()).toEqual({ x: 1, y: 1 });
+  await test.step('move up, left, up, left', async () => {
+    await play.root().press('ArrowUp');
+    await play.root().press('ArrowLeft');
+    await play.root().press('ArrowUp');
+    await play.root().press('ArrowLeft');
+    expect(await play.selectedBlocks()).toHaveLength(1);
+    await play.next().isDisabled();
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 1, y: 1 });
+  });
 });
 
 test('cannot cross itself in the middle', async ({ play }) => {
-  await play.goto('?n=6&m=20&x=1&y=1');
+  await test.step('6x6 grid, max 20 steps, start at (1,1)', async () => {
+    await play.goto('?n=6&m=20&x=1&y=1');
+  });
 
-  await play.next().isDisabled();
-  await play.root().press('ArrowRight');
-  await play.root().press('ArrowRight');
-  await play.root().press('ArrowRight');
-  expect(await play.selectedBlocks()).toHaveLength(4);
+  await test.step('move right 3 times', async () => {
+    await play.next().isDisabled();
+    await play.root().press('ArrowRight');
+    await play.root().press('ArrowRight');
+    await play.root().press('ArrowRight');
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 1, y: 4 });
+    expect(await play.selectedBlocks()).toHaveLength(4);
+  });
 
-  await play.root().press('ArrowDown');
-  await play.root().press('ArrowDown');
-  await play.root().press('ArrowDown');
-  expect(await play.selectedBlocks()).toHaveLength(7);
+  await test.step('move down 3 times', async () => {
+    await play.root().press('ArrowDown');
+    await play.root().press('ArrowDown');
+    await play.root().press('ArrowDown');
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 4, y: 4 });
+    expect(await play.selectedBlocks()).toHaveLength(7);
+  });
 
-  await play.root().press('ArrowLeft');
-  await play.root().press('ArrowLeft');
-  await play.root().press('ArrowLeft');
-  expect(await play.selectedBlocks()).toHaveLength(10);
+  await test.step('move left 3 times', async () => {
+    await play.root().press('ArrowLeft');
+    await play.root().press('ArrowLeft');
+    await play.root().press('ArrowLeft');
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 4, y: 1 });
+    expect(await play.selectedBlocks()).toHaveLength(10);
+  });
 
-  await play.root().press('ArrowUp');
-  await play.root().press('ArrowUp');
-  await play.root().press('ArrowUp');
-  expect(await play.selectedBlocks()).toHaveLength(12);
+  await test.step('move up 3 times', async () => {
+    await play.root().press('ArrowUp');
+    await play.root().press('ArrowUp');
+    await play.root().press('ArrowUp');
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 2, y: 1 });
+    expect(await play.selectedBlocks()).toHaveLength(12);
+  });
 
-  await play.root().press('ArrowUp'); // cannot cross
-  await play.root().press('ArrowUp'); // cannot cross
-  await play.root().press('ArrowUp'); // cannot cross
-  expect(await play.selectedBlocks()).toHaveLength(12);
+  await test.step('move up 3 times, but it wont go up anymore, because it is blocked', async () => {
+    await play.root().press('ArrowUp'); // cannot cross
+    await play.root().press('ArrowUp'); // cannot cross
+    await play.root().press('ArrowUp'); // cannot cross
+    expect(await play.lastSelectedBlockPosition()).toEqual({ x: 2, y: 1 });
+    expect(await play.selectedBlocks()).toHaveLength(12);
+  });
 });

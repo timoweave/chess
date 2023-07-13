@@ -72,8 +72,14 @@ A quick demo of using the chessboard
 only re-render components that is changed, as shown in the bottom two lines, which is mostly greyout (not render). a list of child `<Block/>` for parent `<Blocks>` and a list of child `<SelectedBlock/>` for parent `<SelecteBlocks/>`.
 ![step 3](./doc/chess_rerendering_optimization.png)
 
+## react hook testing
+1. testing hook by itself make react state management developement reliable and need no make testing lengthy because additional cost from ui component and the expensive time from slow testing browser.
+1. the react hook is tested with typescript, vite, vitest, and @testing-library/react.
+![react hook testing](./doc/chess_hook_testing.png)
+
 ## playwright e2e testing report
-1. it is easy to run typescript/playwright with vscode then from command line
+1. it is easy to run typescript/playwright with vscode or playwright ui then from command line
+![playwright ui testing](./doc/chess_playwright_testing.png)
 ![vscode playwright extension](./doc/chess_vscode_playwright.png)
 1. create 10 tests from basic to pressing arrow key back and forth
 ![playwright report](./doc/chess_playwright.png)

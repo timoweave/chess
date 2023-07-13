@@ -7,6 +7,8 @@ export default mergeConfig(
     test: {
       environment: 'jsdom',
       setupFiles: ['./vitest.setup.ts'],
+      include: ['./tests/**/*.test.*'],
+      exclude: ['./tests/**/*.spec.*', '**/node_modules/**'],
       reporters: ['verbose'],
       root: './',
       globals: false,
